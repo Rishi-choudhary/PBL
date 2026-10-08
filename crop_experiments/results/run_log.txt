@@ -1,0 +1,20 @@
+  saved figure fig01_feature_ranges_by_crop
+  saved table tab01_tree_depth_vs_accuracy
+  saved table tab01_single_feature_accuracy
+  saved figure fig02_separability
+  saved table tab01_distribution_tests
+  saved table tab01_distribution_summary
+  saved figure fig03_feature_correlation
+rows=2200, classes=22, per-class min=100 max=100
+exact duplicate rows=0, duplicate feature vectors=0, missing values=0
+best two-feature tree: humidity+rainfall -> CV accuracy 0.7691
+share of crop x feature cells NOT rejected (p>0.05):
+    feature  frac_consistent_uniform  frac_consistent_normal  median_unique_values
+          K                 0.818182                     0.0                  11.0
+          N                 0.863636                     0.0                  37.5
+          P                 0.909091                     0.0                  26.0
+   humidity                 0.954545                     0.0                 100.0
+         ph                 0.954545                     0.0                 100.0
+   rainfall                 1.000000                     0.0                 100.0
+temperature                 0.909091                     0.0                 100.0
+split 1/25 done (37s)

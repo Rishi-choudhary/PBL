@@ -1,0 +1,12 @@
+rows=2200, classes=22, per-class min=100 max=100
+exact duplicate rows=0, duplicate feature vectors=0, missing values=0
+best two-feature tree: humidity+rainfall -> CV accuracy 0.7691
+share of crop x feature cells NOT rejected (p>0.05):
+    feature  frac_consistent_uniform  frac_consistent_normal  median_unique_values
+          K                 0.818182                     0.0                  11.0
+          N                 0.863636                     0.0                  37.5
+          P                 0.909091                     0.0                  26.0
+   humidity                 0.954545                     0.0                 100.0
+         ph                 0.954545                     0.0                 100.0
+   rainfall                 1.000000                     0.0                 100.0
+temperature                 0.909091                     0.0                 100.0

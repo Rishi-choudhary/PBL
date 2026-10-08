@@ -1,0 +1,5 @@
+metric,value
+top-3 feature agreement (mean),0.7633
+share with identical top feature,0.8000
+Spearman rank corr. of |attribution| (mean),0.6489
+sign agreement on shared top-3,0.9767

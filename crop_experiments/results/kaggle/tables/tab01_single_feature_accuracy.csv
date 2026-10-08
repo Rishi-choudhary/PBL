@@ -1,0 +1,8 @@
+feature,cv_accuracy_single_feature_tree
+N,0.1455
+P,0.1968
+K,0.2877
+temperature,0.1759
+humidity,0.3173
+ph,0.1327
+rainfall,0.3273

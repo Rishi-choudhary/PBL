@@ -1,0 +1,24 @@
+Stump alone                                      acc=0.0909  rounds kept=-
+AdaBoost + stump (50, lr=1)                      acc=0.2541  rounds kept=50.0
+AdaBoost + stump (500, lr=1)                     acc=0.1982  rounds kept=500.0
+Depth-3 tree alone                               acc=0.2264  rounds kept=-
+AdaBoost + depth-3 (200, lr=0.5)                 acc=0.9914  rounds kept=200.0
+Gaussian NB alone                                acc=0.9945  rounds kept=-
+AdaBoost + Gaussian NB (50, lr=1)                acc=0.9782  rounds kept=50.0
+RBF-SVM alone, unscaled                          acc=0.9782  rounds kept=-
+AdaBoost + RBF-SVM, unscaled (50, lr=1)          acc=0.8845  rounds kept=50.0
+RBF-SVM alone, standardised                      acc=0.9836  rounds kept=-
+AdaBoost + RBF-SVM, standardised (50, lr=1)      acc=0.8755  rounds kept=50.0
+AdaBoost + RBF-SVM, standardised (50, lr=0.1)    acc=0.8755  rounds kept=50.0
+  saved table tab03_adaboost_diagnosis
+  saved figure fig08_adaboost_diagnosis
+fold 1/5 done
+fold 2/5 done
+fold 3/5 done
+fold 4/5 done
+fold 5/5 done
+  saved table tab04_learning_curve
+  saved table tab04_noise_robustness
+  saved table tab04_feature_ablation
+  saved figure fig09_learning_curve_and_noise
+  saved figure fig10_feature_ablation

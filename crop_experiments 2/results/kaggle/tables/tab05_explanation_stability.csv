@@ -1,0 +1,4 @@
+method,kendalls_W_across_splits,mean_pairwise_tau,min_pairwise_tau,top1_feature_modal,top1_agreement_share
+SHAP,0.9657,0.9323,0.8095,humidity,1.0000
+Permutation,0.9400,0.8646,0.6190,humidity,1.0000
+Gain,0.9550,0.8963,0.7143,humidity,1.0000

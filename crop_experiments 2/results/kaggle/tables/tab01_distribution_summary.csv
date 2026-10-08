@@ -1,0 +1,8 @@
+feature,frac_consistent_uniform,frac_consistent_normal,median_unique_values
+K,0.8182,0.0000,11.0000
+N,0.8636,0.0000,37.5000
+P,0.9091,0.0000,26.0000
+humidity,0.9545,0.0000,100.0000
+ph,0.9545,0.0000,100.0000
+rainfall,1.0000,0.0000,100.0000
+temperature,0.9091,0.0000,100.0000

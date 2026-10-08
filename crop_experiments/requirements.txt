@@ -1,0 +1,13 @@
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+scikit-learn>=1.5
+matplotlib>=3.8
+xgboost>=2.0
+lightgbm>=4.3
+catboost>=1.2
+shap>=0.45
+lime>=0.2
+# optional, needs internet access to HuggingFace for model weights (works on Colab):
+# tabpfn
+# tabpfn-extensions[many_class]

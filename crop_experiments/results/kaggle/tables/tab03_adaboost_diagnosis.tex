@@ -1,0 +1,18 @@
+\begin{tabular}{lrrrrrr}
+\toprule
+configuration & accuracy_mean & accuracy_std & macro_f1_mean & rounds_kept_mean & first_round_weighted_error & chance_error_threshold_1_minus_1_over_K \\
+\midrule
+Stump alone & 0.0909 & 0.0000 & 0.0496 & NaN & NaN & 0.9545 \\
+AdaBoost + stump (50, lr=1) & 0.2541 & 0.1028 & 0.1703 & 50.0000 & 0.9091 & 0.9545 \\
+AdaBoost + stump (500, lr=1) & 0.1982 & 0.1028 & 0.1268 & 500.0000 & 0.9091 & 0.9545 \\
+Depth-3 tree alone & 0.2264 & 0.0020 & 0.1708 & NaN & NaN & 0.9545 \\
+AdaBoost + depth-3 (200, lr=0.5) & 0.9914 & 0.0047 & 0.9913 & 200.0000 & 0.7727 & 0.9545 \\
+Gaussian NB alone & 0.9945 & 0.0020 & 0.9945 & NaN & NaN & 0.9545 \\
+AdaBoost + Gaussian NB (50, lr=1) & 0.9782 & 0.0071 & 0.9772 & 50.0000 & 0.0049 & 0.9545 \\
+RBF-SVM alone, unscaled & 0.9782 & 0.0041 & 0.9780 & NaN & NaN & 0.9545 \\
+AdaBoost + RBF-SVM, unscaled (50, lr=1) & 0.8845 & 0.0168 & 0.8700 & 50.0000 & 0.1125 & 0.9545 \\
+RBF-SVM alone, standardised & 0.9836 & 0.0049 & 0.9836 & NaN & NaN & 0.9545 \\
+AdaBoost + RBF-SVM, standardised (50, lr=1) & 0.8755 & 0.0155 & 0.8687 & 50.0000 & 0.1194 & 0.9545 \\
+AdaBoost + RBF-SVM, standardised (50, lr=0.1) & 0.8755 & 0.0155 & 0.8687 & 50.0000 & 0.1194 & 0.9545 \\
+\bottomrule
+\end{tabular}

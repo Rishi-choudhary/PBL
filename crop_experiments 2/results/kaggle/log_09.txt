@@ -1,0 +1,28 @@
+Logistic Regression    train 0.9861  test 0.9786
+Gaussian NB            train 0.9951  test 0.9945
+KNN (k=5)              train 1.0000  test 0.9755
+SVM (RBF)              train 0.9931  test 0.9882
+Decision Tree          train 1.0000  test 0.9877
+Random Forest          train 1.0000  test 0.9950
+Extra Trees            train 1.0000  test 0.9932
+XGBoost                train 1.0000  test 0.9932
+LightGBM               train 1.0000  test 0.9932
+CatBoost               train 1.0000  test 0.9950
+MLP (128-64)           train 0.9718  test 0.9636
+  saved table tab09_train_vs_test_gap
+  saved table tab09_tree_depth_curve
+  saved table tab09_knn_k_curve
+  saved table tab09_permutation_test
+permutation test: real 0.9959, shuffled mean 0.0463, p = 0.0099
+  saved table tab09_generator_check
+                                              0
+rows_consistent_with_generator      2200.000000
+rows_total                          2200.000000
+distinct_N_offsets                    41.000000
+distinct_P_offsets                    26.000000
+distinct_K_offsets                    11.000000
+rows_with_unique_NPK_box             904.000000
+median_candidates                      2.000000
+lookup_expected_accuracy_NPK_only      0.658152
+random_forest_cv_accuracy_NPK_only     0.650000
+  saved figure fig14_overfitting_vs_leakage

@@ -1,0 +1,23 @@
+\begin{tabular}{llrr}
+\toprule
+feature_set & model & loo_accuracy & loo_macro_f1 \\
+\midrule
+All features & Decision Tree & 0.9697 & 0.9457 \\
+All features & Random Forest & 0.9596 & 0.9291 \\
+All features & Logistic Regression & 0.8586 & 0.8150 \\
+All features & SVM (RBF) & 0.6667 & 0.6165 \\
+N, P, K only & Decision Tree & 0.9697 & 0.9457 \\
+N, P, K only & Random Forest & 1.0000 & 1.0000 \\
+N, P, K only & Logistic Regression & 1.0000 & 1.0000 \\
+N, P, K only & SVM (RBF) & 1.0000 & 1.0000 \\
+Temperature, humidity, moisture & Decision Tree & 0.1717 & 0.1331 \\
+Temperature, humidity, moisture & Random Forest & 0.1616 & 0.1542 \\
+Temperature, humidity, moisture & Logistic Regression & 0.1616 & 0.0778 \\
+Temperature, humidity, moisture & SVM (RBF) & 0.2525 & 0.1845 \\
+Soil type + crop type & Decision Tree & 0.0909 & 0.0814 \\
+Soil type + crop type & Random Forest & 0.1111 & 0.0778 \\
+Soil type + crop type & Logistic Regression & 0.1717 & 0.1056 \\
+Soil type + crop type & SVM (RBF) & 0.1414 & 0.0800 \\
+Majority class & - & 0.2222 & NaN \\
+\bottomrule
+\end{tabular}

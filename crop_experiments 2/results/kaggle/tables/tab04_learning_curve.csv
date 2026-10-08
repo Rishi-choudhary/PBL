@@ -1,0 +1,41 @@
+model,per_class,mean,std
+Gaussian NB,2,0.3853,0.0778
+Gaussian NB,4,0.8940,0.0217
+Gaussian NB,8,0.9773,0.0069
+Gaussian NB,16,0.9918,0.0050
+Gaussian NB,32,0.9941,0.0020
+Gaussian NB,48,0.9945,0.0035
+Gaussian NB,64,0.9950,0.0034
+Gaussian NB,80,0.9945,0.0020
+LightGBM,2,0.6912,0.0219
+LightGBM,4,0.8439,0.0228
+LightGBM,8,0.8913,0.0280
+LightGBM,16,0.9531,0.0165
+LightGBM,32,0.9744,0.0085
+LightGBM,48,0.9841,0.0028
+LightGBM,64,0.9864,0.0036
+LightGBM,80,0.9932,0.0036
+Logistic Regression,2,0.7925,0.0311
+Logistic Regression,4,0.8887,0.0348
+Logistic Regression,8,0.9385,0.0206
+Logistic Regression,16,0.9693,0.0036
+Logistic Regression,32,0.9730,0.0031
+Logistic Regression,48,0.9758,0.0032
+Logistic Regression,64,0.9776,0.0049
+Logistic Regression,80,0.9785,0.0054
+Random Forest,2,0.8689,0.0289
+Random Forest,4,0.9561,0.0055
+Random Forest,8,0.9741,0.0056
+Random Forest,16,0.9886,0.0046
+Random Forest,32,0.9913,0.0038
+Random Forest,48,0.9932,0.0023
+Random Forest,64,0.9959,0.0030
+Random Forest,80,0.9954,0.0028
+SVM (RBF),2,0.8009,0.0344
+SVM (RBF),4,0.8928,0.0190
+SVM (RBF),8,0.9502,0.0098
+SVM (RBF),16,0.9790,0.0051
+SVM (RBF),32,0.9853,0.0032
+SVM (RBF),48,0.9840,0.0037
+SVM (RBF),64,0.9868,0.0038
+SVM (RBF),80,0.9881,0.0041

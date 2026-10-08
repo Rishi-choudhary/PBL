@@ -1,0 +1,4 @@
+method,dataset,NPK_share,uninformative_share,noise_feature_share,noise_rank,n_features
+SHAP,Fertilizer (99 rows),0.7379,0.2349,0.0273,7.0000,23
+LIME,Fertilizer (99 rows),0.6242,0.3588,0.0170,17.0000,23
+Permutation,Fertilizer (99 rows),0.9735,0.0232,0.0033,6.0000,23

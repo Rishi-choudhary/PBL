@@ -1,0 +1,41 @@
+{
+  "icrisat_rows": 12418,
+  "districts": 311,
+  "states": 20,
+  "years": [
+    1978,
+    2017
+  ],
+  "crops": [
+    "RICE",
+    "WHEAT",
+    "KHARIF SORGHUM",
+    "RABI SORGHUM",
+    "PEARL MILLET",
+    "MAIZE",
+    "FINGER MILLET",
+    "BARLEY",
+    "CHICKPEA",
+    "PIGEONPEA",
+    "MINOR PULSES",
+    "GROUNDNUT",
+    "SESAMUM",
+    "RAPESEED AND MUSTARD",
+    "SAFFLOWER",
+    "CASTOR",
+    "LINSEED",
+    "SUNFLOWER",
+    "SOYABEAN",
+    "SUGARCANE",
+    "COTTON",
+    "POTATOES",
+    "ONION",
+    "FRUITS",
+    "VEGETABLES"
+  ],
+  "share_threshold": 0.05,
+  "long_rows": 309647,
+  "wide_rows": 12392,
+  "soil_attached": false,
+  "climate_attached": false
+}

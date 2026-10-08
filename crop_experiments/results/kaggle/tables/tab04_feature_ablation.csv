@@ -1,0 +1,21 @@
+model,feature_set,macro_f1_mean,macro_f1_std
+Random Forest,All 7 features,0.9950,0.0030
+Random Forest,without N,0.9954,0.0032
+Random Forest,without P,0.9918,0.0034
+Random Forest,without K,0.9918,0.0053
+Random Forest,without temperature,0.9950,0.0034
+Random Forest,without humidity,0.9837,0.0058
+Random Forest,without ph,0.9913,0.0030
+Random Forest,without rainfall,0.9673,0.0094
+Random Forest,"Soil only (N, P, K, pH)",0.7880,0.0079
+Random Forest,"Climate only (temp., humidity, rain)",0.9185,0.0102
+LightGBM,All 7 features,0.9932,0.0036
+LightGBM,without N,0.9886,0.0048
+LightGBM,without P,0.9877,0.0085
+LightGBM,without K,0.9859,0.0044
+LightGBM,without temperature,0.9904,0.0059
+LightGBM,without humidity,0.9818,0.0043
+LightGBM,without ph,0.9886,0.0058
+LightGBM,without rainfall,0.9631,0.0091
+LightGBM,"Soil only (N, P, K, pH)",0.7801,0.0076
+LightGBM,"Climate only (temp., humidity, rain)",0.9153,0.0161

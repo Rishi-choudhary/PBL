@@ -1,0 +1,33 @@
+  saved table tab10_shap_lime_disagreement
+                                     metric    value
+             top-3 feature agreement (mean) 0.763333
+           share with identical top feature 0.800000
+Spearman rank corr. of |attribution| (mean) 0.648929
+             sign agreement on shared top-3 0.976667
+  saved table tab10_deletion_faithfulness
+  saved table tab10_noise_feature_sanity
+  saved table tab10_fertilizer_attribution_shares
+     method  noise_feature_share  noise_feature_rank              dataset
+       SHAP             0.000652                 8.0          Kaggle crop
+       LIME             0.028345                 8.0          Kaggle crop
+Permutation             0.000146                 8.0          Kaggle crop
+       SHAP             0.027252                 7.0 Fertilizer (99 rows)
+       LIME             0.017024                17.0 Fertilizer (99 rows)
+Permutation             0.003311                 6.0 Fertilizer (99 rows)
+     method              dataset  NPK_share  uninformative_share  noise_feature_share  noise_rank  n_features
+       SHAP Fertilizer (99 rows)   0.737872             0.234876             0.027252         7.0          23
+       LIME Fertilizer (99 rows)   0.624211             0.358765             0.017024        17.0          23
+Permutation Fertilizer (99 rows)   0.973510             0.023179             0.003311         6.0          23
+counterfactuals 1/110
+counterfactuals 21/110
+counterfactuals 41/110
+counterfactuals 61/110
+counterfactuals 81/110
+counterfactuals 101/110
+  saved table tab10_counterfactual_summary
+                                                         metric      value
+ crop pairs reachable by soil change alone (share of instances)   0.376190
+counterfactuals landing in target crop's generator range (+-10)   0.397008
+                                            instances explained 110.000000
+  saved figure fig15_xai_disagreement_faithfulness
+  saved figure fig16_counterfactual_feasibility

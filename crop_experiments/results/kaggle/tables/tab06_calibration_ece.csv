@@ -1,0 +1,6 @@
+model,ece_raw,ece_isotonic,mean_confidence,accuracy
+Gaussian NB,0.0038,0.0054,0.9925,0.9945
+SVM (RBF),0.1101,0.0070,0.8790,0.9891
+Random Forest,0.0398,0.0038,0.9552,0.9950
+LightGBM,0.0068,0.0190,0.9952,0.9932
+MLP (128-64),0.0698,0.0134,0.8942,0.9636

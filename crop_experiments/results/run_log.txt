@@ -17,4 +17,3 @@ share of crop x feature cells NOT rejected (p>0.05):
          ph                 0.954545                     0.0                 100.0
    rainfall                 1.000000                     0.0                 100.0
 temperature                 0.909091                     0.0                 100.0
-split 1/25 done (37s)

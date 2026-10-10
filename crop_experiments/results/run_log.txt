@@ -19,3 +19,13 @@ share of crop x feature cells NOT rejected (p>0.05):
 temperature                 0.909091                     0.0                 100.0
 split 1/25 done (35s)
 split 2/25 done (67s)
+split 3/25 done (100s)
+split 4/25 done (131s)
+split 5/25 done (163s)
+split 6/25 done (194s)
+split 7/25 done (226s)
+split 8/25 done (257s)
+split 9/25 done (289s)
+split 10/25 done (321s)
+split 11/25 done (353s)
+split 12/25 done (385s)

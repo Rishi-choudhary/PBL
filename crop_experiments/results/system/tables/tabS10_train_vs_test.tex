@@ -1,0 +1,16 @@
+\begin{tabular}{lrrr}
+\toprule
+model & train_accuracy & test_accuracy & gap_pp \\
+\midrule
+Logistic Regression & 0.9739 & 0.9727 & 0.1136 \\
+Naive Bayes & 0.9949 & 0.9955 & -0.0568 \\
+KNN (k=5) & 0.9847 & 0.9795 & 0.5114 \\
+SVM (RBF) & 0.9858 & 0.9841 & 0.1705 \\
+Decision Tree & 1.0000 & 0.9795 & 2.0455 \\
+Random Forest & 1.0000 & 0.9955 & 0.4545 \\
+XGBoost & 1.0000 & 0.9909 & 0.9091 \\
+LightGBM & 1.0000 & 0.9886 & 1.1364 \\
+AdaBoost (default) & 0.1744 & 0.1750 & -0.0568 \\
+AdaBoost (depth-3 trees) & 0.9955 & 0.9932 & 0.2273 \\
+\bottomrule
+\end{tabular}

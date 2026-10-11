@@ -27,6 +27,14 @@ All of them are produced by `12_crop_system.py`. Paths are relative to `crop_exp
 | RF per-crop F1 < 1 | blackgram 0.974, jute 0.976, maize 0.976, rice 0.974 | T `tabS3_per_crop_best.csv` |
 | Six farmers' top-3 crops and probabilities (Table V) | as printed | T `tabS4_farmer_examples.csv` |
 
+## Overfitting check (deck slide 14; `13_overfitting_check.py`)
+
+| Claim | Value | Source |
+|---|---|---|
+| Train / test / gap: RF, NB, XGBoost, LR, DT | 100.00/99.55/0.45, 99.49/99.55/−0.06, 100.00/99.09/0.91, 97.39/97.27/0.11, 100.00/97.95/2.05 | T `tabS10_train_vs_test.csv` |
+| Tree depth curve, train vs test | e.g. depth 8: 89.49 / 87.05; unlimited: 100.00 / 97.95 | T `tabS10_tree_depth.csv` |
+| RF shuffled labels (100 permutations) | mean 4.61 %, max 5.85 %, chance 4.55 %, p = 0.0099 | T `tabS10_permutation_test.csv` |
+
 ## Explainable AI (Figs. 5, 6)
 
 | Claim | Value | Source |

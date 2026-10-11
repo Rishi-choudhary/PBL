@@ -1,0 +1,2 @@
+real_label_cv_accuracy,shuffled_mean,shuffled_max,chance,p_value,n_permutations
+0.9938,0.0461,0.0585,0.0455,0.0099,100

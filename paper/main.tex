@@ -5,17 +5,14 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{booktabs}
-\usepackage{multirow}
 \usepackage{xcolor}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta}
 \usepackage{url}
-\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-    T\kern-.1667em\lower.7ex\hbox{\sc e}\kern-.125em\scalebox{0.85}{X}}}
 
 \begin{document}
 
-\title{When 99\% Is Not Evidence: Benchmark Leakage, Model Comparison and Explanation Disagreement in Crop and Fertilizer Recommendation}
+\title{Crop Recommendation System Using Machine Learning, Explainable AI and Fertilizer Recommendation}
 
 % TODO: replace with the real author names, departments and e-mails.
 \author{\IEEEauthorblockN{Author One}
@@ -40,400 +37,416 @@ guide@example.com}
 \maketitle
 
 \begin{abstract}
-Machine learning papers on crop recommendation routinely report accuracies above 95\% on the public Kaggle crop dataset, and fertilizer papers report near-perfect accuracy on a 99-row ``Fertilizer Prediction'' dataset. We test what these numbers measure. We compare 16 classifiers on the crop dataset with 5$\times$5 repeated stratified cross-validation and a corrected resampled $t$-test, diagnose overfitting with train/test gaps, complexity curves and a label-permutation test, and trace the dataset to its creator's notebook. The best model (Stacking) reaches 99.57\% accuracy, but 11 of 16 models are not significantly worse, including Gaussian Naive Bayes (99.47\%) and a single decision tree (98.80\%). The models are not overfitting: train/test gaps are 0.06 to 2.5 percentage points. Instead, the N, P and K columns were generated from the label: all 2,200 rows satisfy the creator's rule $N=\text{base}_N[\text{crop}]+U\{-20,20\}$, and a lookup of the 22-row base table identifies the crop from N, P, K with 65.8\% expected accuracy and no learning. On the fertilizer dataset, N, P and K alone give 100\% leave-one-out accuracy, while temperature, humidity and moisture give 16--25\% and soil plus crop type 9--17\%, below the 22\% majority class; each class's median N:P:K is closest to the grade of the fertilizer in its own label. SHAP and LIME agree on the top feature in 80\% of instances, and both attribute 23--36\% of the fertilizer model to features that carry no information. We conclude that these benchmarks measure recovery of a generating rule, not agronomic skill, and we describe the evaluation a real-data study needs.
+Choosing a crop that suits the soil and the local weather is one of the first decisions a farmer makes each season, and a poor choice costs a full season of work. We built a crop recommendation system that takes seven inputs (soil nitrogen, phosphorus, potassium and pH, temperature, humidity and rainfall), recommends the three most suitable crops, explains the recommendation, and suggests how to correct the soil with fertilizer. We trained and tested ten machine learning algorithms on a public dataset of 2,200 samples covering 22 crops, using an 80/20 stratified split. Random Forest and Naive Bayes gave the highest test accuracy, 99.55\% (438 of 440 test samples), followed by AdaBoost with depth-3 trees (99.32\%) and XGBoost (99.09\%). AdaBoost with its default settings reached only 17.50\%, and we explain why. To show the farmer why a crop was chosen, we used SHAP and LIME on the Random Forest. Humidity (22\%) and rainfall (18\%) had the largest overall influence, and the two methods named the same top feature for 66\% of 100 test cases. For fertilizer recommendation we compared eight algorithms on a 99-sample fertilizer dataset; XGBoost was best with 97.69\% accuracy under repeated cross-validation, and the soil N, P and K values carried almost all of the predictive weight. A simple nutrient-gap rule then compares the farmer's soil with the needs of the recommended crop.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Crop recommendation, fertilizer recommendation, benchmark leakage, model comparison, explainable AI, SHAP, LIME, conformal prediction
+Crop recommendation, machine learning, Random Forest, explainable AI, SHAP, LIME, fertilizer recommendation, precision agriculture
 \end{IEEEkeywords}
 
 \section{Introduction}
 
-Choosing which crop to grow and how much fertilizer to apply are the two decisions a farmer makes every season, and both have attracted a large body of machine learning work. Most of this work follows one template: take the public Kaggle ``Crop Recommendation'' dataset \cite{kaggle_crop}, with seven features (N, P, K, temperature, humidity, pH, rainfall) and 22 crops, train several classifiers, and report the one with the highest accuracy, usually above 95\%. Fertilizer recommendation follows the same template on a 99-row dataset that maps soil and weather readings to one of seven fertilizer names.
+Most farmers in India decide what to sow from experience and from what their neighbours grow. That works when conditions stay the same, but soil nutrients change with years of cropping and fertilizer use, and rainfall varies from season to season. A crop that does not suit the field gives a low yield, and the loss is felt for the whole season.
 
-A model that scores 99\% looks ready to advise farmers. Before accepting that, three questions need answers. Is the difference between the best model and the rest real, or within the noise of the split? Is the high score a sign of overfitting, or of something in the data? And when an explanation method such as SHAP \cite{lundberg2017} says which feature drove a recommendation, does a second method agree, and does the explanation point to something a farmer could change?
+Soil testing has become more common, and a farmer can now know the nitrogen (N), phosphorus (P) and potassium (K) content and the pH of the field. Weather data are also easy to obtain. The difficulty is turning these numbers into a decision. Machine learning is a natural fit here: given enough examples of the conditions under which each crop grows well, a model can learn which crop matches a new set of soil and weather values \cite{liakos2018}.
 
-We answer these questions with experiments, not argument. Our main contributions are:
+A recommendation alone is not enough, though. A farmer is unlikely to trust a crop name that comes with no reason, and the next question after ``what should I grow?'' is usually ``what fertilizer should I apply?''. We therefore designed the system around three parts: a crop recommender, an explanation of each recommendation, and a fertilizer module.
+
+Our contributions are:
 \begin{itemize}
-\item A comparison of 16 classifiers on the crop dataset under 5$\times$5 repeated stratified cross-validation with a corrected resampled $t$-test \cite{nadeau2003,bouckaert2004} and Holm adjustment \cite{holm1979}: 11 of the other 15 models are statistically tied with the best.
-\item A diagnosis that separates overfitting from leakage \cite{kaufman2012,kapoor2023}: train/test gaps, complexity curves and a label-permutation test \cite{ojala2010} rule out overfitting, and the creator's notebook \cite{harvestify} shows that N, P, K were generated from the label. We verify this for 2,200 of 2,200 rows.
-\item A comparison of feature groups and models on the fertilizer dataset showing that the N:P:K inputs mirror the nutrient grade of the fertilizer named in the label, and a soil-test alternative that converts a nutrient dose into product quantities.
-\item An evaluation of the explanations themselves: SHAP versus LIME \cite{ribeiro2016} agreement, a deletion test, a pure-noise feature check and constrained counterfactuals \cite{wachter2018,ustun2019}, plus calibration \cite{guo2017} and conformal prediction sets \cite{sadinle2019,romano2020}.
+\item A comparison of ten algorithms (Logistic Regression, Naive Bayes, K-Nearest Neighbours, SVM, Decision Tree, Random Forest, XGBoost, LightGBM and two AdaBoost variants) on the same train/test split, reporting accuracy, precision, recall, F1-score, cross-validation accuracy and training time.
+\item An explainable AI module that uses SHAP and LIME to show which soil and weather values led to a recommendation, both for the whole dataset and for a single farmer.
+\item A fertilizer module with two parts: a comparison of eight algorithms that predict the fertilizer from soil and crop data, and a nutrient-gap rule that compares the farmer's N, P and K with the requirement of the recommended crop.
+\item All results come from public datasets, which we list with their links so that others can repeat the work.
 \end{itemize}
 
-The paper is organised as follows. Section~II gives background and related work. Section~III describes the datasets and the evaluation protocol. Section~IV presents the results for crop and fertilizer recommendation and discusses them. Section~V concludes and lists the real-data work that follows.
+The rest of the paper is organised as follows. Section~II covers the algorithms and related work. Section~III describes the datasets and the proposed system. Section~IV presents the results, and Section~V concludes.
 
 \section{Background}
 
 \subsection{Preliminary Concepts}
 
-\subsubsection{Models compared}
-We compare 16 classifiers that cover the families used in the crop recommendation literature (Table~\ref{tab:models}): linear (logistic regression), probabilistic (Gaussian Naive Bayes), instance-based ($k$-NN), kernel (RBF-SVM), a single decision tree, bagged trees (Random Forest \cite{breiman2001}, Extra Trees, Bagging), boosted trees (AdaBoost \cite{freund1997,zhu2009}, histogram gradient boosting, XGBoost \cite{chen2016}, LightGBM \cite{ke2017}, CatBoost \cite{prokhorenkova2018}), a multilayer perceptron, and two ensembles (soft voting and stacking \cite{wolpert1992}). All models use scikit-learn \cite{pedregosa2011} or the libraries' own implementations.
-
-\begin{table}[htbp]
-\caption{Models Compared and Their Fixed Settings (Not Tuned)}
-\label{tab:models}
-\centering
-\footnotesize
-\begin{tabular}{@{}ll@{}}
-\toprule
-\textbf{Model} & \textbf{Setting} \\
-\midrule
-Logistic Regression & standardised, $C=10$ \\
-Gaussian NB & default \\
-KNN & standardised, $k=5$, distance wts. \\
-SVM (RBF) & standardised, $C=10$, $\gamma$=scale \\
-Decision Tree & unpruned \\
-Random Forest / Extra Trees & 300 trees \\
-Bagging & 100 unpruned trees \\
-AdaBoost & depth-3 trees, 200 rounds, lr 0.5 \\
-HGB, XGBoost, LightGBM, CatBoost & defaults \\
-MLP & 128--64 units, early stopping \\
-Soft Voting & RF + XGBoost + LightGBM \\
-Stacking & RF, ET, SVM, LightGBM $\rightarrow$ LR \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Hyperparameters are fixed in advance and not tuned on the data; the same settings are used in every experiment. With the scores reported below, tuning cannot separate the models in any meaningful way.
-
-\subsubsection{SHapley Additive exPlanations (SHAP)}
-SHAP \cite{lundberg2017} decomposes a model's output for input $\mathbf{x}$ into per-feature contributions,
+\subsubsection{Decision Tree and Random Forest}
+A decision tree splits the data on one feature at a time, choosing at each node the threshold that best separates the classes, until each leaf holds mostly one class \cite{quinlan1986}. A single tree is easy to read but changes a lot when the training data change slightly. Random Forest \cite{breiman2001} trains many trees, each on a bootstrap sample of the data and with a random subset of features at each split, and takes the majority vote:
 \begin{equation}
-f(\mathbf{x}) = \phi_0 + \sum_{j=1}^{M}\phi_j ,
+\hat{y} = \operatorname{mode}\{h_t(\mathbf{x})\}_{t=1}^{T},
 \end{equation}
-where $\phi_0$ is the expected output and $\phi_j$ is the Shapley value of feature $j$. For tree ensembles TreeSHAP computes these values exactly in polynomial time \cite{lundberg2020}.
+where $h_t$ is the $t$-th tree. The fraction of trees that vote for each crop also gives a probability, which we use to rank crops.
+
+\subsubsection{K-Nearest Neighbours (KNN)}
+KNN \cite{cover1967} stores the training samples and labels a new sample by a vote among the $k$ samples closest to it. Closeness is measured with the Euclidean distance
+\begin{equation}
+d(\mathbf{x}, \mathbf{x}') = \sqrt{\sum_{j=1}^{M} (x_j - x'_j)^2},
+\end{equation}
+so features must be put on a common scale first; otherwise rainfall, measured in hundreds of millimetres, would dominate pH.
+
+\subsubsection{Naive Bayes}
+Gaussian Naive Bayes assumes that, within each crop, every feature follows a normal distribution and the features are independent. It picks the crop $c$ that maximises
+\begin{equation}
+P(c)\prod_{j=1}^{M} \mathcal{N}\!\left(x_j;\, \mu_{cj}, \sigma_{cj}^2\right),
+\end{equation}
+where $\mu_{cj}$ and $\sigma_{cj}$ are the mean and standard deviation of feature $j$ for crop $c$.
+
+\subsubsection{Support Vector Machine (SVM)}
+An SVM finds the boundary with the widest margin between classes \cite{cortes1995}. With a radial basis function (RBF) kernel the boundary can be curved, and multi-class problems are handled by combining several two-class SVMs.
+
+\subsubsection{Boosting}
+Boosting trains models one after another, each one focusing on the samples the previous ones got wrong. AdaBoost \cite{freund1997} raises the weight of misclassified samples after every round; its multi-class version is SAMME \cite{zhu2009}. XGBoost \cite{chen2016} and LightGBM \cite{ke2017} are gradient boosting libraries that fit each new tree to the errors of the current ensemble and are widely used for tabular data.
+
+\subsubsection{SHAP}
+SHapley Additive exPlanations \cite{lundberg2017} split one prediction into a contribution from each feature:
+\begin{equation}
+f(\mathbf{x}) = \phi_0 + \sum_{j=1}^{M} \phi_j,
+\end{equation}
+where $\phi_0$ is the average output of the model and $\phi_j$ is the contribution of feature $j$, computed as a Shapley value from game theory. For tree models, TreeSHAP computes these values exactly and quickly \cite{lundberg2020}.
 
 \subsubsection{LIME}
-LIME \cite{ribeiro2016} fits a sparse linear model to the classifier's outputs on perturbed copies of one instance and reports its coefficients as the explanation. SHAP and LIME answer slightly different questions, so they can disagree \cite{krishna2024}.
-
-\subsubsection{Conformal prediction}
-Split conformal prediction returns a set of crops $C(\mathbf{x})$ that contains the true crop with probability at least $1-\alpha$. With the least ambiguous set-valued classifier (LAC) \cite{sadinle2019}, the score is $s(\mathbf{x},y)=1-\hat p_y(\mathbf{x})$ and
+LIME \cite{ribeiro2016} explains one prediction by creating many slightly changed copies of the input, asking the model to predict them, and fitting a simple linear model $g$ to those predictions:
 \begin{equation}
-C(\mathbf{x}) = \{\,y : 1-\hat p_y(\mathbf{x}) \le \hat q\,\},
+\xi(\mathbf{x}) = \arg\min_{g} \; \mathcal{L}(f, g, \pi_{\mathbf{x}}) + \Omega(g),
 \end{equation}
-where $\hat q$ is the $\lceil (n+1)(1-\alpha)\rceil/n$ quantile of the scores on $n$ calibration rows. Adaptive prediction sets (APS) \cite{romano2020} accumulate sorted probabilities instead. See \cite{angelopoulos2021} for an introduction.
+where $\pi_{\mathbf{x}}$ gives more weight to copies close to $\mathbf{x}$ and $\Omega$ keeps $g$ simple. The weights of $g$ are the explanation.
 
 \subsection{Related Work}
 
-\textit{Crop and fertilizer recommendation.} The Kaggle crop dataset \cite{kaggle_crop} is the most common benchmark for crop recommendation. Its creator's repository, Harvestify \cite{harvestify}, describes it as a ``custom built dataset'' and warns not to use it for farming decisions. The fertilizer dataset is used the same way, as a 7-class classification task.
+Liakos et al. \cite{liakos2018} reviewed machine learning in agriculture and grouped the work into crop, livestock, water and soil management; crop recommendation sits in the first group. Van Klompenburg et al. \cite{vanklompenburg2020} reviewed crop yield prediction studies; temperature, rainfall and soil type were among the features used most often.
 
-\textit{Leakage.} Leakage occurs when the features contain information about the label that would not be available at prediction time \cite{kaufman2012}. Kapoor and Narayanan found leakage behind reproducibility failures in many ML-based studies across 17 fields \cite{kapoor2023}. A dataset whose features were generated from its label is an extreme case.
+For recommending a crop, Kumar et al. \cite{kumar2015} proposed a crop selection method that chooses a sequence of crops to improve the yield rate over a season. Pudumalar et al. \cite{pudumalar2017} combined several classifiers in an ensemble that recommends a crop from soil properties. Doshi et al. \cite{doshi2018} built AgroConsultant, which compares several classifiers for crop recommendation using soil and climate inputs. The public Harvestify project \cite{harvestify} offers crop recommendation, fertilizer suggestion and plant disease detection on one website and is the source of the crop dataset we use.
 
-\textit{Model comparison.} Comparing classifiers by mean accuracy on repeated splits overstates significance because the training sets overlap; the corrected resampled $t$-test accounts for this \cite{nadeau2003,bouckaert2004}. On tabular data, tree ensembles remain strong baselines against deep models \cite{grinsztajn2022}.
+Explainable AI has started to appear in agricultural data analysis \cite{ryo2022}. The crop recommendation studies above compare the accuracy of their models but do not explain individual recommendations to the farmer, and fertilizer advice is treated as a separate problem. Our system brings the three steps together and compares a wider set of algorithms on the same split.
 
-\textit{Spatial validation.} When observations are spatially correlated, random cross-validation overestimates accuracy and block or leave-region-out validation is needed \cite{roberts2017}. The crop benchmark has no location field, so this cannot be tested on it.
+\section{Proposed System}
 
-\textit{Evaluating explanations.} Explanation methods disagree with each other \cite{krishna2024}. Counterfactual explanations state the smallest change that alters a prediction \cite{wachter2018}, and actionable recourse restricts that change to features a person can control \cite{ustun2019}.
+\subsection{System Overview}
 
-That is the gap we address: published crop and fertilizer results are reported without significance tests, without checking where the data came from, and without testing the explanations they show.
-
-\section{Proposed Approach}
-
-\subsection{Datasets}
-
-\textit{Crop dataset.} 2,200 rows, 22 crops with exactly 100 rows each, seven features, no missing values and no duplicate rows \cite{kaggle_crop}. The creator's notebook \cite{harvestify} builds each row from a 22-row table of base values per crop:
-\begin{equation}
-\begin{aligned}
-N &= \text{base}_N[c] + U\{-20,20\},\\
-P &= \text{base}_P[c] + U\{-5,20\},\\
-K &= \text{base}_K[c] + U\{-5,5\},
-\end{aligned}
-\label{eq:gen}
-\end{equation}
-where $c$ is the crop label and $U\{a,b\}$ is a uniform random integer. Temperature, humidity, pH and rainfall are copied from a second file whose origin is not documented.
-
-\textit{Fertilizer dataset.} 99 rows, seven fertilizer classes (Urea 22, DAP 18, 28-28 17, 14-35-14 14, 20-20 14, 17-17-17 7, 10-26-26 7) and eight inputs: temperature, humidity, moisture, soil type, crop type, N, P and K. Its construction is not documented.
-
-\subsection{Evaluation Protocol}
-
-\subsubsection{Model comparison}
-Each model is trained and tested on the same 25 splits (5-fold stratified cross-validation repeated 5 times). We report accuracy, macro-F1, top-3 accuracy, log-loss, expected calibration error (ECE, 15 bins) and fit time. Each model is compared with the best by the corrected resampled $t$-statistic
-\begin{equation}
-t = \frac{\bar d}{\sqrt{\left(\frac{1}{kr} + \frac{n_2}{n_1}\right)\hat\sigma_d^2}},
-\end{equation}
-where $\bar d$ and $\hat\sigma_d^2$ are the mean and variance of the macro-F1 differences over the $kr=25$ splits and $n_2/n_1$ is the test-to-train size ratio \cite{nadeau2003}. $p$-values are Holm-adjusted for 15 comparisons.
-
-\subsubsection{Overfitting versus leakage}
-Overfitting shows as a gap between training and held-out accuracy. We measure that gap for 11 models, plot accuracy against decision-tree depth and $k$ in $k$-NN, and run a label-permutation test with 100 permutations \cite{ojala2010}. We then check every row against (\ref{eq:gen}) and compute the accuracy of a zero-learning lookup: for each row, the crops whose generator box contains its (N, P, K), with ties split uniformly.
-
-\subsubsection{Robustness}
-Learning curves use 2 to 80 training rows per crop. Measurement noise adds Gaussian noise with standard deviation $k$ times each feature's standard deviation to the test rows. Feature ablation removes one feature at a time and compares soil-only (N, P, K, pH) with climate-only features.
-
-\subsubsection{Explanations}
-For 200 test instances we compare SHAP and LIME (2,000 perturbations) by top-3 overlap, same top feature, Spearman correlation and sign agreement. In the deletion test we set the top-$k$ features to their median and record the predicted crop's probability; a faithful ranking should drop it faster than a random one. We add one pure-noise feature and record the share of attribution it receives. Stability across splits is measured with Kendall's $W$. Counterfactuals keep climate fixed and change only N, P, K and pH.
-
-\subsubsection{Fertilizer}
-On the fertilizer data we use leave-one-out accuracy for four models and four feature groups, against the majority class. For each class we take the median (N, P, K) and compute its cosine similarity with the N--P$_2$O$_5$--K$_2$O grade $\mathbf{g}$ of every product:
-\begin{equation}
-\cos(\mathbf{m}_c,\mathbf{g}) = \frac{\mathbf{m}_c\cdot\mathbf{g}}{\lVert\mathbf{m}_c\rVert\,\lVert\mathbf{g}\rVert}.
-\end{equation}
-If the inputs mirror the label, each class is most similar to its own product. Finally we convert a nutrient dose into product quantities: P$_2$O$_5$ comes only from DAP (18-46-0), the remaining N from urea (46-0-0) and K$_2$O from MOP (0-0-60):
-\begin{equation}
-\text{DAP} = \frac{P_2O_5}{0.46},\quad
-\text{Urea} = \frac{N - 0.18\,\text{DAP}}{0.46},\quad
-\text{MOP} = \frac{K_2O}{0.60}.
-\label{eq:dose}
-\end{equation}
-
-\subsection{Experimental Pipeline}
-
-The pipeline is shown in Fig.~\ref{fig:pipeline}. All experiments use seed 42 and run on CPU.
+Fig.~\ref{fig:system} shows the system. The farmer supplies soil test values and weather conditions. The crop model returns the three most likely crops with a probability for each. The explanation module shows which inputs pushed the model towards the first crop. The fertilizer module then checks the soil against that crop's needs.
 
 \begin{figure}[htbp]
 \centering
 \footnotesize
 \begin{tikzpicture}[
-  box/.style={draw, rounded corners=2pt, align=center, minimum width=7.6cm, minimum height=0.55cm, inner sep=2pt},
-  sbox/.style={draw, rounded corners=2pt, align=center, minimum width=3.6cm, minimum height=0.55cm, inner sep=2pt},
-  arr/.style={-{Stealth[length=4pt]}}, node distance=0.28cm]
-\node[sbox] (k) {Kaggle crop dataset\\2,200 rows, 22 crops};
-\node[sbox, right=0.4cm of k] (f) {Fertilizer dataset\\99 rows, 7 classes};
-\node[box, below=of k.south east, anchor=north, xshift=0.2cm] (p) {Provenance check: creator's notebook, generator rule (\ref{eq:gen})};
-\node[box, below=of p] (m) {16 models, 5$\times$5 repeated CV, corrected $t$-test (Holm)};
-\node[box, below=of m] (o) {Overfitting vs leakage: gaps, complexity curves, permutation test};
-\node[box, below=of o] (r) {Robustness: learning curve, noise, feature ablation};
-\node[box, below=of r] (x) {Explanations: SHAP vs LIME, deletion, noise feature, counterfactuals};
-\node[box, below=of x] (u) {Uncertainty: calibration (ECE), conformal sets (LAC, APS)};
-\node[box, below=of u] (fz) {Fertilizer: LOO by feature group, N:P:K vs grade, dose $\rightarrow$ products};
-\draw[arr] (k) -- (k |- p.north);
-\draw[arr] (f.south) -- (f |- p.north);
-\draw[arr] (p) -- (m); \draw[arr] (m) -- (o); \draw[arr] (o) -- (r);
-\draw[arr] (r) -- (x); \draw[arr] (x) -- (u); \draw[arr] (u) -- (fz);
+  box/.style={draw, rounded corners=2pt, align=center, minimum width=7.4cm, minimum height=0.55cm, inner sep=2pt},
+  half/.style={draw, rounded corners=2pt, align=center, minimum width=3.55cm, minimum height=0.55cm, inner sep=2pt},
+  arr/.style={-{Stealth[length=4pt]}}, node distance=0.3cm]
+\node[box] (in) {Farmer input: N, P, K, pH, temperature, humidity, rainfall};
+\node[box, below=of in] (pre) {Pre-processing: scaling (for KNN, SVM, LR), label encoding};
+\node[box, below=of pre] (tr) {Training: 10 algorithms, 80/20 split, 5-fold CV};
+\node[box, below=of tr] (rf) {Crop model (Random Forest): top-3 crops with probabilities};
+\node[half, below=of rf.south west, anchor=north west] (xai) {Explainable AI\\SHAP and LIME};
+\node[half, below=of rf.south east, anchor=north east] (fert) {Fertilizer module\\ML model + nutrient gap};
+\node[box, below=0.3cm of xai.south west, anchor=north west] (out) {Output: recommended crop, reasons, fertilizer advice};
+\draw[arr] (in) -- (pre); \draw[arr] (pre) -- (tr); \draw[arr] (tr) -- (rf);
+\draw[arr] (rf.south -| xai) -- (xai); \draw[arr] (rf.south -| fert) -- (fert);
+\draw[arr] (xai) -- (xai |- out.north); \draw[arr] (fert) -- (fert |- out.north);
 \end{tikzpicture}
-\caption{Experimental pipeline. Both public benchmarks go through a provenance check, then the same evaluation stages; the fertilizer dataset also gets a grade-matching test and a dose-to-product conversion.}
-\label{fig:pipeline}
+\caption{Architecture of the proposed crop recommendation system.}
+\label{fig:system}
 \end{figure}
+
+\subsection{Datasets}
+
+We used three public datasets (Table~\ref{tab:data}).
+
+\begin{table}[htbp]
+\caption{Datasets Used in This Work}
+\label{tab:data}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}p{2.0cm}p{0.9cm}p{1.6cm}p{3.1cm}@{}}
+\toprule
+\textbf{Dataset} & \textbf{Rows} & \textbf{Classes} & \textbf{Features} \\
+\midrule
+Crop Recommendation \cite{kaggle_crop} & 2,200 & 22 crops (100 each) & N, P, K, temperature, humidity, pH, rainfall \\
+Fertilizer Prediction \cite{kaggle_fert} & 99 & 7 fertilizers & temperature, humidity, moisture, soil type, crop type, N, P, K \\
+Crop nutrient requirement \cite{harvestify} & 22 & -- & required N, P, K and pH per crop \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The crop dataset was released on Kaggle by the creator of Harvestify \cite{kaggle_crop,harvestify}. It contains 22 crops, among them rice, maize, chickpea, cotton, jute, coffee and several fruits, with exactly 100 samples per crop. The fertilizer dataset \cite{kaggle_fert} maps soil and crop information to one of seven fertilizers: Urea (22 rows), DAP (18), 28-28 (17), 14-35-14 (14), 20-20 (14), 17-17-17 (7) and 10-26-26 (7). The requirement table, taken from the Harvestify repository, lists the N, P and K values that each of the 22 crops needs, on the same scale as the crop dataset.
+
+\subsection{Data Analysis and Pre-processing}
+
+The crop dataset has no missing values and no duplicate rows. Table~\ref{tab:range} gives the range of each feature. The features are on very different scales: K goes up to 205 while pH stays between 3.5 and 9.9.
+
+\begin{table}[htbp]
+\caption{Summary of the Crop Dataset Features}
+\label{tab:range}
+\centering
+\footnotesize
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Feature} & \textbf{Mean} & \textbf{Std.} & \textbf{Min} & \textbf{Max} \\
+\midrule
+N & 50.55 & 36.92 & 0.00 & 140.00 \\
+P & 53.36 & 32.99 & 5.00 & 145.00 \\
+K & 48.15 & 50.65 & 5.00 & 205.00 \\
+Temperature (\textdegree C) & 25.62 & 5.06 & 8.83 & 43.68 \\
+Humidity (\%) & 71.48 & 22.26 & 14.26 & 99.98 \\
+pH & 6.47 & 0.77 & 3.50 & 9.94 \\
+Rainfall (mm) & 103.46 & 54.96 & 20.21 & 298.56 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Fig.~\ref{fig:eda}(a) shows the correlation between features. Only P and K are strongly related ($r = 0.74$); every other pair stays between $-0.23$ and $0.21$, so each feature adds its own information. Fig.~\ref{fig:eda}(b) shows how different the crops are in their nutrient needs. Apple and grapes have by far the highest P and K (around 133 and 200), cotton has the highest N (118), and crops such as mango and orange sit low on all three.
+
+\begin{figure*}[htbp]
+\centerline{\includegraphics[width=0.78\textwidth]{figures/figS1_data_analysis.pdf}}
+\caption{Data analysis of the crop dataset. (a) Pearson correlation between the seven features. (b) Mean N, P and K for each crop.}
+\label{fig:eda}
+\end{figure*}
+
+For pre-processing we encoded the crop names as integers and split the data with a stratified 80/20 split (random seed 42), giving 1,760 training and 440 test samples, 20 per crop in the test set. KNN, SVM and Logistic Regression were given standardised features (zero mean, unit variance), with the scaler fitted on the training set only. Tree models and Naive Bayes used the raw values. For the fertilizer data, soil type and crop type were one-hot encoded.
+
+\subsection{Algorithms and Training}
+
+Table~\ref{tab:algos} lists the ten algorithms and their settings. We used the library defaults apart from the settings shown, and did not tune hyperparameters. We kept AdaBoost in two forms because AdaBoost is often reported with its default settings, and those settings behave very differently on this problem (Section~IV-C).
+
+\begin{table}[htbp]
+\caption{Algorithms and Settings}
+\label{tab:algos}
+\centering
+\footnotesize
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Algorithm} & \textbf{Settings} \\
+\midrule
+Logistic Regression & scaled, max. 5000 iterations \\
+Naive Bayes & Gaussian \\
+KNN & scaled, $k=5$ \\
+SVM & scaled, RBF kernel \\
+Decision Tree & no depth limit \\
+Random Forest & 100 trees \\
+XGBoost & 300 trees, depth 6, learning rate 0.1 \\
+LightGBM & 300 trees, 31 leaves, learning rate 0.05 \\
+AdaBoost (default) & 50 decision stumps (depth 1) \\
+AdaBoost (depth-3 trees) & 200 trees of depth 3, learning rate 0.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Testing and Evaluation Metrics}
+
+Each algorithm was trained on the 1,760 training samples and tested once on the 440 held-out samples. We report accuracy and the macro averages of precision, recall and F1-score over the 22 crops:
+\begin{equation}
+\text{Precision}_c = \frac{TP_c}{TP_c + FP_c}, \quad \text{Recall}_c = \frac{TP_c}{TP_c + FN_c},
+\end{equation}
+\begin{equation}
+F1_c = \frac{2\,\text{Precision}_c \cdot \text{Recall}_c}{\text{Precision}_c + \text{Recall}_c},
+\end{equation}
+where $TP_c$, $FP_c$ and $FN_c$ are the true positives, false positives and false negatives for crop $c$. Because a single split can be lucky or unlucky, we also ran 5-fold stratified cross-validation on the training set and report its mean and standard deviation. Training time was measured on a 4-core CPU.
+
+\subsection{Explainable AI Module}
+
+We explained the Random Forest with TreeSHAP. The global importance of feature $j$ is the mean absolute SHAP value over the $n$ test samples and the $K=22$ crop outputs:
+\begin{equation}
+I_j = \frac{1}{nK}\sum_{i=1}^{n}\sum_{k=1}^{K} \left|\phi_j^{(k)}(\mathbf{x}_i)\right|.
+\end{equation}
+For each crop we also computed the importance using only that crop's own test samples and its own output, which shows what the model looks at when it recommends that crop. For a single farmer we show the SHAP values of the recommended crop next to a LIME explanation built from 2,000 perturbed samples. To see how often the two methods agree, we compared them on 100 randomly chosen test samples.
+
+\subsection{Fertilizer Recommendation Module}
+
+\subsubsection{Machine learning model}
+We trained eight algorithms to predict the fertilizer name from the eight inputs of the fertilizer dataset. With only 99 rows, a single 80/20 split would leave about 20 test rows and just one or two for the smallest classes, so we used stratified 5-fold cross-validation repeated 10 times and report the mean and standard deviation of accuracy over the 50 test folds. To see which inputs the model uses, we computed permutation importance for the Random Forest on held-out folds: the drop in accuracy when one feature's values are shuffled.
+
+\subsubsection{Nutrient-gap rule}
+The second part follows the approach of Harvestify \cite{harvestify}. For a recommended crop $c$ with required nutrients $\mathbf{r}_c = (N, P, K)$ and the farmer's soil values $\mathbf{s}$, we compute the gap
+\begin{equation}
+\mathbf{g} = \mathbf{r}_c - \mathbf{s}, \qquad j^{*} = \arg\max_{j} |g_j|.
+\end{equation}
+The nutrient $j^{*}$ with the largest gap decides the advice. If $g_{j^*} > 0$ the soil is short of that nutrient and we suggest a fertilizer that supplies it: urea for N, DAP or single super phosphate (SSP) for P, and muriate of potash (MOP) for K. If $g_{j^*} < 0$ the soil already has more than the crop needs and we advise skipping that nutrient for the season.
 
 \section{Results and Discussion}
 
 \subsection{Experimental Setup}
 
-Experiments use Python with scikit-learn \cite{pedregosa2011}, XGBoost, LightGBM, CatBoost, SHAP and LIME, and run on a CPU. Every number below is read from a result file produced by the experiment scripts; the ledger \texttt{results/CLAIMS.md} maps each number to its file.
+All experiments were written in Python 3.13 with scikit-learn 1.9.1 \cite{pedregosa2011}, XGBoost 3.4.1, LightGBM 4.7.0, SHAP 0.52.0 and LIME 0.2.0.1, and ran on a CPU. The random seed was 42 throughout.
 
-\subsection{Comparison of Machine Learning Models}
+\subsection{Comparison of Algorithms}
 
-Table~\ref{tab:bench} and Fig.~\ref{fig:bench} give the comparison. Stacking has the highest mean accuracy, 99.57\%. Eleven of the other 15 models, from soft voting (99.54\%) down to the single decision tree (98.80\%), are not significantly worse after Holm adjustment. Only SVM, logistic regression, $k$-NN and the MLP are significantly worse, and the worst of them, the MLP, still reaches 96.18\%.
+Table~\ref{tab:results} and Fig.~\ref{fig:compare} give the results on the 440 test samples. Random Forest and Naive Bayes share the top place with 99.55\% accuracy; each misclassified only 2 of the 440 test samples. AdaBoost with depth-3 trees (3 errors), XGBoost (4) and LightGBM (5) follow closely. SVM, Decision Tree, KNN and Logistic Regression are a little behind, between 97.27\% and 98.41\%.
 
 \begin{table*}[htbp]
-\caption{Model Comparison on the Kaggle Crop Dataset (Mean $\pm$ Standard Deviation Over 25 Splits of 5$\times$5 Repeated Stratified CV). Holm $p$: Corrected Resampled $t$-Test Against the Best Model on Macro-F1}
-\label{tab:bench}
+\caption{Crop Recommendation: Results on the 440 Test Samples and 5-Fold Cross-Validation (CV) on the Training Set}
+\label{tab:results}
 \centering
 \footnotesize
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{@{}lccccccc@{}}
 \toprule
-\textbf{Model} & \textbf{Accuracy (\%)} & \textbf{Macro-F1 (\%)} & \textbf{Top-3 (\%)} & \textbf{Log-loss} & \textbf{ECE} & \textbf{Fit time (s)} & \textbf{Holm $p$} \\
+\textbf{Algorithm} & \textbf{Accuracy (\%)} & \textbf{Precision (\%)} & \textbf{Recall (\%)} & \textbf{F1-score (\%)} & \textbf{Errors (of 440)} & \textbf{CV accuracy (\%)} & \textbf{Training time (s)} \\
 \midrule
-Stacking (RF, ET, SVM, LGBM $\rightarrow$ LR) & 99.57 $\pm$ 0.26 & 99.57 $\pm$ 0.26 & 100.0 $\pm$ 0.0 & 0.035 & 0.027 & 14.13 & -- \\
-Soft Voting (RF + XGB + LGBM) & 99.54 $\pm$ 0.25 & 99.53 $\pm$ 0.25 & 100.0 $\pm$ 0.0 & 0.031 & 0.022 & 17.86 & 1.000 \\
-Random Forest & 99.52 $\pm$ 0.28 & 99.52 $\pm$ 0.28 & 100.0 $\pm$ 0.0 & 0.052 & 0.041 & 0.61 & 1.000 \\
-Gaussian NB & 99.47 $\pm$ 0.24 & 99.47 $\pm$ 0.24 & 100.0 $\pm$ 0.0 & 0.015 & 0.007 & 0.00 & 1.000 \\
-CatBoost & 99.36 $\pm$ 0.43 & 99.36 $\pm$ 0.43 & 100.0 $\pm$ 0.0 & 0.022 & 0.013 & 4.72 & 1.000 \\
-Extra Trees & 99.32 $\pm$ 0.31 & 99.32 $\pm$ 0.31 & 100.0 $\pm$ 0.0 & 0.097 & 0.078 & 0.45 & 1.000 \\
-XGBoost & 99.29 $\pm$ 0.40 & 99.29 $\pm$ 0.40 & 99.93 $\pm$ 0.17 & 0.030 & 0.013 & 0.87 & 1.000 \\
-Bagging (DT) & 99.21 $\pm$ 0.42 & 99.21 $\pm$ 0.42 & 100.0 $\pm$ 0.0 & 0.028 & 0.013 & 0.34 & 1.000 \\
-AdaBoost (tree d=3) & 99.19 $\pm$ 0.43 & 99.19 $\pm$ 0.43 & 99.96 $\pm$ 0.11 & 3.079 & 0.946 & 0.80 & 0.530 \\
-Hist.\ Gradient Boosting & 99.06 $\pm$ 0.44 & 99.06 $\pm$ 0.44 & 99.91 $\pm$ 0.21 & 0.041 & 0.008 & 1.80 & 0.485 \\
-LightGBM & 99.03 $\pm$ 0.46 & 99.02 $\pm$ 0.46 & 99.92 $\pm$ 0.21 & 0.038 & 0.008 & 1.52 & 0.441 \\
-SVM (RBF) & 98.85 $\pm$ 0.29 & 98.84 $\pm$ 0.30 & 100.0 $\pm$ 0.0 & 0.143 & 0.111 & 0.12 & \textbf{0.003} \\
-Decision Tree & 98.80 $\pm$ 0.69 & 98.80 $\pm$ 0.69 & 99.05 $\pm$ 0.66 & 0.414 & 0.012 & 0.01 & 0.530 \\
-Logistic Regression & 97.92 $\pm$ 0.49 & 97.91 $\pm$ 0.49 & 100.0 $\pm$ 0.0 & 0.082 & 0.039 & 0.06 & \textbf{0.000} \\
-KNN ($k$=5) & 97.60 $\pm$ 0.61 & 97.59 $\pm$ 0.61 & 99.69 $\pm$ 0.22 & 0.190 & 0.020 & 0.00 & \textbf{0.000} \\
-MLP (128-64) & 96.18 $\pm$ 0.88 & 96.17 $\pm$ 0.88 & 99.93 $\pm$ 0.14 & 0.167 & 0.081 & 0.72 & \textbf{0.000} \\
+Random Forest & \textbf{99.55} & 99.57 & 99.55 & 99.55 & 2 & 99.38 $\pm$ 0.61 & 0.24 \\
+Naive Bayes & \textbf{99.55} & 99.59 & 99.55 & 99.54 & 2 & 99.49 $\pm$ 0.42 & $<$0.01 \\
+AdaBoost (depth-3 trees) & 99.32 & 99.37 & 99.32 & 99.30 & 3 & 98.75 $\pm$ 0.29 & 0.92 \\
+XGBoost & 99.09 & 99.13 & 99.09 & 99.08 & 4 & 99.26 $\pm$ 0.14 & 1.02 \\
+LightGBM & 98.86 & 98.94 & 98.86 & 98.86 & 5 & 99.03 $\pm$ 0.39 & 1.44 \\
+SVM (RBF) & 98.41 & 98.56 & 98.41 & 98.40 & 7 & 97.90 $\pm$ 1.03 & 0.16 \\
+Decision Tree & 97.95 & 98.06 & 97.95 & 97.94 & 9 & 98.52 $\pm$ 0.68 & 0.01 \\
+KNN ($k=5$) & 97.95 & 98.04 & 97.95 & 97.93 & 9 & 96.53 $\pm$ 1.21 & $<$0.01 \\
+Logistic Regression & 97.27 & 97.40 & 97.27 & 97.25 & 12 & 96.82 $\pm$ 0.66 & 0.04 \\
+AdaBoost (default) & 17.50 & 11.21 & 17.50 & 8.56 & 363 & 31.93 $\pm$ 5.85 & 0.14 \\
 \bottomrule
 \end{tabular}
 \end{table*}
 
-\begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{figures/fig04_model_comparison.pdf}}
-\caption{Model comparison. (a) Macro-F1 with 95\% intervals over 25 splits, axis zoomed. Blue: the best model and models not significantly worse; grey: significantly worse. (b) Log-loss on a log scale.}
-\label{fig:bench}
-\end{figure}
-
-The ranking therefore says little. Gaussian Naive Bayes fits in under 0.01~s and ties with a 14-second stacked ensemble; it also has the lowest log-loss (0.015) and ECE (0.007). AdaBoost with depth-3 trees ties on accuracy but has a log-loss of 3.079 and an ECE of 0.946, because its scores are not probabilities.
-
-\textit{The AdaBoost anomaly.} With its default weak learner, AdaBoost scores far below every other model. Fig.~\ref{fig:ada} shows why. With default decision stumps, AdaBoost reaches only 25.4\% (50 rounds) and 19.8\% (500 rounds): a single stump splits 22 classes into two groups and scores 9.1\%, so the weak learner is too weak. With depth-3 trees it reaches 99.1\%. Boosting a strong learner hurts: AdaBoost on an RBF-SVM scores 88.5\% against 97.8\% for the SVM alone, and on Gaussian NB 97.8\% against 99.5\%. A low AdaBoost score is a configuration result, not evidence about the method.
-
-\begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{figures/fig08_adaboost_diagnosis.pdf}}
-\caption{AdaBoost on 22 classes. (a) 5-fold accuracy of each base learner alone (grey) and boosted (blue). (b) Test accuracy by boosting round on one fold.}
-\label{fig:ada}
-\end{figure}
-
-\subsection{Is 99\% Accuracy Overfitting?}
-
-No. Fig.~\ref{fig:leak}(a) shows train and held-out accuracy for 11 models. The gap is 0.06 percentage points for Gaussian NB, 0.5 for Random Forest and CatBoost, and at most 2.5 for $k$-NN. The tree-depth curve in Fig.~\ref{fig:leak}(b) rises together on train and test and never diverges. With shuffled labels a Random Forest scores 4.6\% on average (maximum 6.1\%; chance is 4.5\%), against 99.6\% with real labels ($p=0.0099$, the smallest value 100 permutations allow).
-
 \begin{figure*}[htbp]
-\centerline{\includegraphics[width=0.82\textwidth]{figures/fig14_overfitting_vs_leakage.pdf}}
-\caption{Overfitting versus leakage on the Kaggle crop dataset. (a) Train versus held-out accuracy (5-fold mean). (b) Decision-tree depth curve. (c) Label-permutation test, 100 runs. (d) For each row, the number of crops whose generator box (\ref{eq:gen}) contains its N, P, K; a lookup of the creator's base table reaches 65.8\% expected accuracy, a Random Forest trained on N, P, K reaches 65.0\%.}
-\label{fig:leak}
+\centerline{\includegraphics[width=0.78\textwidth]{figures/figS2_model_comparison.pdf}}
+\caption{Comparison of the ten algorithms. (a) Test accuracy (bars) and 5-fold cross-validation accuracy on the training set (dots, mean $\pm$ standard deviation); the two best models are highlighted. (b) Training time on a log scale.}
+\label{fig:compare}
 \end{figure*}
 
-The high score has another source. All 2,200 rows satisfy (\ref{eq:gen}), and the observed offsets take exactly 41, 26 and 11 distinct values, the numbers the random ranges allow. A lookup of the base table, with no training, identifies the crop from N, P, K alone with 65.8\% expected accuracy; a Random Forest trained on the same three columns reaches 65.0\% (Fig.~\ref{fig:leak}(d)). The model learns the generator, and the climate columns separate what the N, P, K boxes leave tied. An independent check agrees: of the 154 crop--feature cells, none is consistent with a normal distribution and 82--100\% per feature are consistent with a uniform one.
+The differences among the top five algorithms are small. Between 99.55\% and 98.86\% lie only three test samples, and the cross-validation results (98.75\% to 99.49\%) place the same five algorithms at the top. On this dataset several algorithms work about equally well, and the choice between them should rest on other qualities. We chose Random Forest for the system. It ties for the best accuracy, trains in a quarter of a second, gives a probability for every crop so that we can show a top-3 list, and TreeSHAP explains it exactly. Naive Bayes is an equally accurate and even faster alternative when explanations are not needed.
 
-\subsection{Robustness}
+The one clear failure is AdaBoost with default settings, at 17.50\% on the test set. Its default weak learner is a stump, a tree with a single split. One split can only divide the 22 crops into two groups, so each round of boosting adds very little, and the ensemble never separates most crops. When the stump is replaced by a depth-3 tree, the same algorithm reaches 99.32\%. A low AdaBoost score on this kind of problem points to the choice of weak learner, not to boosting itself.
 
-Fig.~\ref{fig:robust} shows that the task is easy for a second reason. With only 8 training rows per crop, a Random Forest reaches 0.974 macro-F1. Small measurement noise, however, hurts the tree models most: at noise of 0.2 standard deviations, LightGBM falls to 0.773, Random Forest to 0.872 and the SVM to 0.947. Feature ablation shows that climate alone (temperature, humidity, rainfall) gives 0.918 macro-F1 for Random Forest while soil alone (N, P, K, pH) gives 0.788; removing rainfall costs the most (0.995 to 0.967).
+\subsection{Testing the Selected Model}
+
+Fig.~\ref{fig:cm} shows the confusion matrix of the Random Forest on the test set. Twenty of the 22 crops were classified perfectly. The two errors were one rice sample predicted as jute and one blackgram sample predicted as maize, which gives these four crops an F1-score between 0.974 and 0.976. Both mistakes are understandable. Rice and jute have almost the same average N, P and K (about 80, 47 and 40) and both grow in humid conditions (humidity around 80\%), differing mainly in rainfall (236~mm against 175~mm). Blackgram and maize have the same average humidity (65\%) and similar K.
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{figures/fig09_learning_curve_and_noise.pdf}}
-\caption{Robustness. (a) Macro-F1 against training rows per crop. (b) Macro-F1 against Gaussian noise added to the test features, in units of each feature's standard deviation.}
-\label{fig:robust}
+\centerline{\includegraphics[width=0.88\columnwidth]{figures/figS3_confusion_best.pdf}}
+\caption{Confusion matrix of the Random Forest on the 440 test samples.}
+\label{fig:cm}
 \end{figure}
 
-\subsection{Do the Explanations Agree?}
+Table~\ref{tab:farmers} shows how the system responds to six farmers, taken from the test set with different crops. For all six the first recommendation matched the crop actually grown. The probabilities show how confident the model is. For F3 and F6 it is almost certain (0.99), while for F2 the first choice, moth beans, has 0.72 and pigeon peas and maize follow with 0.10 and 0.08. In such a case the top-3 list is more useful to the farmer than a single answer, since the soil and weather suit more than one crop.
 
-On random folds the explanations are stable: SHAP rankings across splits have Kendall's $W=0.97$ and all methods name humidity as the top feature in every split. Stability across splits, however, does not show that an explanation is right. Fig.~\ref{fig:xai} tests that more directly.
+\begin{table*}[htbp]
+\caption{Recommendations for Six Farmers From the Test Set (Random Forest; Probability in Brackets)}
+\label{tab:farmers}
+\centering
+\footnotesize
+\begin{tabular}{@{}lrrrrrrrllll@{}}
+\toprule
+\textbf{Farmer} & \textbf{N} & \textbf{P} & \textbf{K} & \textbf{Temp.} & \textbf{Hum.} & \textbf{pH} & \textbf{Rain} & \textbf{Actual crop} & \textbf{1st choice} & \textbf{2nd choice} & \textbf{3rd choice} \\
+\midrule
+F1 & 18 & 17 & 31 & 31.7 & 45.2 & 5.7 & 93.8 & mango & mango (0.98) & orange (0.01) & pigeon peas (0.01) \\
+F2 & 22 & 44 & 24 & 24.3 & 56.3 & 6.0 & 59.0 & moth beans & moth beans (0.72) & pigeon peas (0.10) & maize (0.08) \\
+F3 & 3 & 67 & 24 & 17.0 & 19.9 & 5.5 & 103.3 & kidney beans & kidney beans (0.99) & pigeon peas (0.01) & blackgram (0.00) \\
+F4 & 34 & 75 & 24 & 23.5 & 51.3 & 4.8 & 192.3 & pigeon peas & pigeon peas (0.98) & moth beans (0.02) & blackgram (0.00) \\
+F5 & 76 & 54 & 45 & 24.3 & 77.6 & 6.2 & 185.0 & jute & jute (0.91) & rice (0.08) & papaya (0.01) \\
+F6 & 117 & 76 & 47 & 25.6 & 77.4 & 6.1 & 93.1 & banana & banana (0.99) & cotton (0.01) & blackgram (0.00) \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{Explainable AI: Why a Crop Is Recommended}
+
+Fig.~\ref{fig:shap}(a) shows the global SHAP importance. Humidity has the largest influence (22\% of the total), followed by rainfall (18\%), K and N (17\% each) and P (16\%). Temperature (7\%) and pH (3\%) matter much less. The model therefore relies on a mix of weather and soil, not on one dominant feature.
 
 \begin{figure*}[htbp]
-\centerline{\includegraphics[width=0.85\textwidth]{figures/fig15_xai_disagreement_faithfulness.pdf}}
-\caption{Testing the explanations. (a) Top-3 features shared by SHAP and LIME over 200 instances. (b) Deletion test: probability of the predicted crop as the top-$k$ features are set to their median. (c) Share of attribution given to an added pure-noise feature.}
-\label{fig:xai}
+\centerline{\includegraphics[width=0.76\textwidth]{figures/figS4_shap_global_per_crop.pdf}}
+\caption{SHAP explanation of the Random Forest. (a) Global importance (mean absolute SHAP value; share of the total in per cent). (b) Importance of each feature when the model recommends each crop, normalised per row; the dot marks the most important feature for that crop.}
+\label{fig:shap}
 \end{figure*}
 
-SHAP and LIME share on average 76\% of their top-3 features, name the same top feature in 80\% of instances, and their attribution magnitudes have a Spearman correlation of 0.65; when they share a feature they agree on its sign 98\% of the time. In the deletion test, setting the top SHAP feature to its median drops the probability of the predicted crop from 0.99 to 0.08; the top LIME feature drops it to 0.20 and a random feature to 0.78. On this dataset SHAP is the more faithful of the two. A pure-noise feature is ranked last by all three methods on the crop data.
+The per-crop view in Fig.~\ref{fig:shap}(b) is more useful to a farmer, because the reason differs from crop to crop. Rainfall is the main factor for 8 crops, including rice, jute, lentil and watermelon, and humidity for 7, including chickpea, kidney beans and mango. For apple, banana and grapes the main factor is P; for cotton and maize it is N; for orange and pomegranate it is K. These match the nutrient profiles in Fig.~\ref{fig:eda}(b): cotton stands out by its high N, and apple and grapes by their high P and K.
 
-\textit{Are explanations actionable?} A farmer can change N, P, K and pH but not the climate. With climate fixed, a change in soil alone reaches the target crop for 38\% of instances, and only 40\% of those counterfactuals fall inside the target crop's range in the data; the rest rely on extrapolation (Fig.~\ref{fig:cf}). Most recommended switches cannot be achieved by soil management.
+Fig.~\ref{fig:farmer} explains the recommendation for farmer F1, who was advised to grow mango with probability 0.98. SHAP gives the largest contributions to humidity (45.2\%, contribution 0.23) and rainfall (93.8~mm, 0.20), followed by K, P and N. In plain words, the field is fairly dry and warm (31.7\textdegree C) and the soil is low in all three nutrients, which is the typical setting for mango in the data. LIME also puts humidity first and reports the rule ``humidity $\le$ 60.2'', but ranks P second and rainfall fifth. The two methods agree on the overall picture but not on every detail. Over 100 test samples they named the same top feature in 66\% of cases, and on average they shared 78\% of their top three features. Showing the farmer only the first two or three reasons, where the methods mostly agree, is the safer choice.
 
-\begin{figure}[htbp]
-\centerline{\includegraphics[width=0.85\columnwidth]{figures/fig16_counterfactual_feasibility.pdf}}
-\caption{Constrained counterfactuals (LightGBM, climate fixed). Share of instances for which changing only N, P, K and pH moves the recommendation from the current crop (row) to the target crop (column).}
-\label{fig:cf}
-\end{figure}
+\begin{figure*}[htbp]
+\centerline{\includegraphics[width=0.72\textwidth]{figures/figS5_farmer_explanation.pdf}}
+\caption{Explanation of one recommendation (farmer F1, mango). (a) SHAP contribution of each input to the probability of mango. (b) LIME weights for the same input.}
+\label{fig:farmer}
+\end{figure*}
 
-\subsection{Calibration and Uncertainty}
+\subsection{Fertilizer Recommendation}
 
-High accuracy does not mean reliable probabilities (Fig.~\ref{fig:unc}). Raw ECE is 0.110 for the SVM and 0.040 for Random Forest; isotonic calibration lowers them to 0.007 and 0.004. Split-conformal LAC sets for LightGBM at $\alpha=0.10$ cover the true crop in 89.7\% of cases, matching the target on average, but coverage for the worst crop is only 60.5\%. Average coverage hides crops for which the guarantee fails. APS sets over-cover (99.4\%) at a larger mean set size (1.14).
-
-\begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{figures/fig13_calibration_conformal.pdf}}
-\caption{Uncertainty. (a) ECE before and after isotonic calibration. (b) Empirical against target coverage of conformal sets. (c) Mean set size for LightGBM.}
-\label{fig:unc}
-\end{figure}
-
-\subsection{Comparison of Fertilizer Recommendation}
-
-Table~\ref{tab:fert} compares four models across four feature groups on the 99-row fertilizer dataset. With N, P and K alone, Random Forest, logistic regression and the SVM reach 100\% leave-one-out accuracy. Temperature, humidity and moisture give 16--25\%, and soil type plus crop type give 9--17\%; both are at or below the 22\% majority class. Adding these uninformative features to N, P, K lowers the SVM from 100\% to 67\%.
+Table~\ref{tab:fert} and Fig.~\ref{fig:fert}(a) compare the eight algorithms on the fertilizer dataset. XGBoost gave the highest accuracy, 97.69\%, followed by Decision Tree (96.28\%), Random Forest (95.07\%) and Logistic Regression (94.35\%). KNN (71.41\%) and Naive Bayes (66.74\%) did poorly. Both treat all eight inputs as equally relevant, while only three of them turn out to matter (below), and two classes have just seven rows each. The standard deviations are larger than for the crop data (3 to 12 points) because each test fold holds only about 20 rows.
 
 \begin{table}[htbp]
-\caption{Fertilizer Dataset: Leave-One-Out Accuracy (\%) by Feature Group and Model. Majority Class: 22.2\%}
+\caption{Fertilizer Recommendation: Accuracy and Macro F1-Score Over 5-Fold Cross-Validation Repeated 10 Times}
 \label{tab:fert}
 \centering
 \footnotesize
-\begin{tabular}{@{}lcccc@{}}
+\begin{tabular}{@{}lcc@{}}
 \toprule
-\textbf{Features} & \textbf{DT} & \textbf{RF} & \textbf{LR} & \textbf{SVM} \\
+\textbf{Algorithm} & \textbf{Accuracy (\%)} & \textbf{F1-score (\%)} \\
 \midrule
-All features & 97.0 & 96.0 & 85.9 & 66.7 \\
-N, P, K only & 97.0 & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} \\
-Temp., humidity, moisture & 17.2 & 16.2 & 16.2 & 25.3 \\
-Soil type + crop type & 9.1 & 11.1 & 17.2 & 14.1 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The reason is in the inputs. Table~\ref{tab:cos} gives the cosine similarity between each class's median N:P:K and the nutrient grade of each fertilizer. For every class the highest similarity is with the grade of its own label (0.991 to 1.000); 20-20 and 28-28 tie because their N:P:K ratios are identical. A decision tree trained on N, P, K reproduces the labels with rules such as ``P $\le$ 4 $\rightarrow$ Urea'' and ``P $>$ 34 $\rightarrow$ DAP'', which restate the composition of the products. Since the construction of the dataset is not documented, we treat this as strong evidence of label mirroring, not proof.
-
-\begin{table}[htbp]
-\caption{Cosine Similarity Between Each Class's Median N:P:K (Rows) and the N--P$_2$O$_5$--K$_2$O Grade of Each Fertilizer (Columns). Bold: Row Maximum}
-\label{tab:cos}
-\centering
-\scriptsize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lccccccc@{}}
-\toprule
-\textbf{Label} & \textbf{10-26-26} & \textbf{14-35-14} & \textbf{17-17-17} & \textbf{20-20} & \textbf{28-28} & \textbf{DAP} & \textbf{Urea} \\
-\midrule
-10-26-26 & \textbf{.999} & .909 & .929 & .638 & .638 & .707 & .236 \\
-14-35-14 & .888 & \textbf{.991} & .839 & .831 & .831 & .954 & .247 \\
-17-17-17 & .951 & .912 & \textbf{.999} & .805 & .805 & .751 & .547 \\
-20-20 & .668 & .862 & .816 & \textbf{1.00} & \textbf{1.00} & .916 & .707 \\
-28-28 & .646 & .834 & .815 & \textbf{.998} & \textbf{.998} & .886 & .755 \\
-DAP & .730 & .936 & .732 & .896 & .896 & \textbf{.999} & .320 \\
-Urea & .262 & .348 & .577 & .707 & .707 & .364 & \textbf{1.00} \\
+XGBoost & \textbf{97.69 $\pm$ 3.20} & 95.02 \\
+Decision Tree & 96.28 $\pm$ 4.00 & 92.24 \\
+Random Forest & 95.07 $\pm$ 4.43 & 89.22 \\
+Logistic Regression & 94.35 $\pm$ 4.56 & 87.59 \\
+SVM (RBF) & 88.09 $\pm$ 5.19 & 77.61 \\
+AdaBoost (depth-3 trees) & 86.19 $\pm$ 12.09 & 74.14 \\
+KNN ($k=5$) & 71.41 $\pm$ 10.40 & 63.13 \\
+Naive Bayes & 66.74 $\pm$ 9.59 & 60.58 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{figure*}[htbp]
-\centerline{\includegraphics[width=0.85\textwidth]{figures/fig17_fertilizer_benchmark.pdf}}
-\caption{Fertilizer benchmark. (a) Leave-one-out accuracy by feature group; dashed line: majority class (0.22). (b) Cosine similarity between each class's median N:P:K and each product's grade.}
+\centerline{\includegraphics[width=0.8\textwidth]{figures/figS6_fertilizer.pdf}}
+\caption{Fertilizer recommendation. (a) Accuracy of the eight algorithms (mean $\pm$ standard deviation over 50 test folds). (b) Permutation importance of each input for the Random Forest, on held-out folds. (c) Confusion matrix of XGBoost over one 5-fold run.}
 \label{fig:fert}
 \end{figure*}
 
-The explanations of the fertilizer model mislead in a different way. SHAP assigns 23\% and LIME 36\% of the total attribution to the features that carry no information (temperature, humidity, moisture, soil and crop type), while held-out permutation importance assigns them 2\%. Attribution methods describe what a fitted model uses, not what is predictive.
+The feature importance in Fig.~\ref{fig:fert}(b) explains the result. Shuffling phosphorus lowers the Random Forest's accuracy by 0.44, nitrogen by 0.31 and potassium by 0.26, while shuffling crop type, temperature, moisture, soil type or humidity changes it by 0.006 or less. In this dataset the choice of fertilizer depends almost entirely on the soil N, P and K, which makes sense, since a fertilizer is chosen to supply the nutrients the soil lacks. In one 5-fold run XGBoost misclassified 2 of 99 samples (Fig.~\ref{fig:fert}(c)): one 10-26-26 sample predicted as 14-35-14 and one 17-17-17 sample predicted as 20-20, both pairs of complex fertilizers that supply all three or two of the nutrients.
 
-\textit{A soil-test alternative.} A fertilizer recommendation in practice is a nutrient dose, set from a soil test and a target yield, and then converted into products. Table~\ref{tab:dose} shows the conversion (\ref{eq:dose}) for one published soil-test crop response (STCR) dose for rice of 100--52--25 kg/ha N--P$_2$O$_5$--K$_2$O \cite{icar_iiss}. It also lists the two soil-test rating standards that we plan to compare on real Soil Health Card samples \cite{icar_iiss,tnau_rating}; that comparison is not yet run because the sample-level data are not yet available.
+Table~\ref{tab:gap} applies the nutrient-gap rule to the six farmers of Table~\ref{tab:farmers}, for the first and the second recommended crop. For the first crop the gaps are mostly small. F1's largest gap for mango is only 3 units of P, and F2's is 4 units for moth beans. This is expected, because the crop model picks the crop whose usual conditions are closest to the farmer's field. The second crop usually needs more correction: F1's soil has 21 units more K than orange needs, and F6's soil has 36 units more P than cotton needs. F3 is an exception. The soil has only 3 units of N against the 20 that kidney beans need, so the system advises adding a nitrogen fertilizer such as urea. The rule thus also tells the farmer how much the soil would have to change for a crop they prefer.
 
-\begin{table}[htbp]
-\caption{Dose-to-Product Conversion and Soil-Test Rating Standards}
-\label{tab:dose}
+\begin{table*}[htbp]
+\caption{Nutrient-Gap Advice for the Six Farmers (Gap = Crop Requirement $-$ Soil Value; the Largest Gap Decides the Advice)}
+\label{tab:gap}
 \centering
 \footnotesize
-\begin{tabular}{@{}lccc@{}}
+\begin{tabular}{@{}lclclll@{}}
 \toprule
-\multicolumn{4}{@{}l}{\textbf{(a) STCR rice dose 100--52--25 kg/ha $\rightarrow$ products (kg/ha)}} \\
+\textbf{Farmer} & \textbf{Soil N-P-K} & \textbf{Rank} & \textbf{Crop} & \textbf{Required N-P-K} & \textbf{Largest gap} & \textbf{Advice} \\
 \midrule
- & \textbf{DAP} (18-46-0) & \textbf{Urea} (46-0-0) & \textbf{MOP} (0-0-60) \\
-Quantity & 113.0 & 173.2 & 41.7 \\
-\midrule
-\multicolumn{4}{@{}l}{\textbf{(b) Low / medium / high thresholds (kg/ha)}} \\
-\midrule
-\textbf{Standard} & \textbf{N} & \textbf{P} & \textbf{K} \\
-ICAR-IISS & $<$280 / -- / $>$560 & $<$10 / -- / $>$25 & $<$120 / -- / $>$280 \\
-TNAU & $<$240 / -- / $>$480 & $<$11 / -- / $>$22 & $<$110 / -- / $>$280 \\
+F1 & 18-17-31 & 1 & mango & 20-20-30 & P low by 3 & add phosphate (DAP or SSP) \\
+   &          & 2 & orange & 20-10-10 & K high by 21 & skip potash this season \\
+F2 & 22-44-24 & 1 & moth beans & 20-40-20 & P high by 4 & skip phosphate this season \\
+   &          & 2 & pigeon peas & 20-60-20 & P low by 16 & add phosphate (DAP or SSP) \\
+F3 & 3-67-24 & 1 & kidney beans & 20-60-20 & N low by 17 & add nitrogen (urea) \\
+   &          & 2 & pigeon peas & 20-60-20 & N low by 17 & add nitrogen (urea) \\
+F4 & 34-75-24 & 1 & pigeon peas & 20-60-20 & P high by 15 & skip phosphate this season \\
+   &          & 2 & moth beans & 20-40-20 & P high by 35 & skip phosphate this season \\
+F5 & 76-54-45 & 1 & jute & 80-40-40 & P high by 14 & skip phosphate this season \\
+   &          & 2 & rice & 80-40-40 & P high by 14 & skip phosphate this season \\
+F6 & 117-76-47 & 1 & banana & 100-75-50 & N high by 17 & skip nitrogen this season \\
+   &          & 2 & cotton & 120-40-20 & P high by 36 & skip phosphate this season \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 \subsection{Discussion}
 
-The two benchmarks show the same pattern. A model scores near 100\% because the inputs were built from, or mirror, the label. On the crop dataset N, P and K are the label plus bounded noise; on the fertilizer dataset N:P:K matches the product's composition. In both cases the remaining features are either copied from an undocumented source or carry no information, and none of this is visible from the accuracy table. A reader of Table~\ref{tab:bench} would conclude that Stacking is the best crop recommender; the significance test says that 11 models are tied, and the provenance check says that none of them has learned agronomy.
+Three points come out of the results. First, on this dataset the best algorithms are very close, and Random Forest, Naive Bayes, XGBoost and AdaBoost with proper weak learners all exceed 99\%. Reporting only the single highest number would hide this; the cross-validation and the error counts show it clearly. Second, the explanations make the recommendations easier to check. The per-crop importance agrees with what the data show about each crop, and a farmer can see which of their own values led to the advice. SHAP and LIME do not always agree, so we treat the top two or three reasons as the explanation and do not rank every feature. Third, the fertilizer models confirm that soil N, P and K drive the fertilizer choice, and the nutrient-gap rule turns this into advice tied to the crop the farmer is about to sow.
 
-The explanations do not raise an alarm either. SHAP correctly reports that humidity, rainfall and N, P, K drive the crop model, because that is what the generator made predictive, and on the fertilizer data it spends almost a quarter of its attribution on features that a held-out test shows are useless. An explanation describes a model; it cannot tell whether the data that shaped the model were real.
-
-\textit{Practical recommendations.} For work on crop or fertilizer recommendation we suggest: (i) check where a dataset came from before reporting accuracy on it; (ii) report significance against the best model and a simple baseline such as Gaussian NB, not only a ranking; (iii) report the train/test gap and a permutation test when claiming that a model does not overfit; (iv) validate explanations with a second method, a deletion test and a noise feature; and (v) report per-class coverage when using conformal sets.
-
-\textit{Threats to validity.} The hyperparameters are fixed, not tuned; tuning could change the order among tied models but not the 99\% ceiling. The fertilizer conclusion rests on a pattern in the data, not on the creator's code, which is not available. All results are on the two public benchmarks; we have not yet shown how the models behave on real field data, which is the main limitation of this paper.
+\textit{Limitations.} The crop dataset was assembled by its author, who combined typical nutrient values for each crop with weather records and notes that it should not be used for real farming decisions \cite{harvestify}. Our accuracies therefore show how well the algorithms learn this dataset; they are not yet a measure of performance on farmers' fields, which needs testing with real soil test reports. The fertilizer dataset has only 99 rows, and two of its classes have seven rows each. Neither dataset states the units of N, P and K, so the nutrient-gap advice names a nutrient and a direction, not a quantity in kg/ha. Finally, all algorithms used default settings; tuning could change the order among the closely matched top models.
 
 \section{Conclusion and Future Work}
 
-We set out to test what near-perfect accuracy on the two most used crop and fertilizer benchmarks measures. On the crop dataset, 11 of 16 models tie with the best at 98.8--99.6\%, the models do not overfit (gaps at most 2.5 points, permutation $p=0.0099$), and the N, P, K features were generated from the label by a rule that holds for all 2,200 rows; a lookup of that rule alone reaches 65.8\%. On the fertilizer dataset, N, P, K alone give 100\% leave-one-out accuracy, the other features are no better than the majority class, and each class's N:P:K matches its product's grade. SHAP and LIME agree on the top feature in 80\% of instances and assign 23--36\% of the fertilizer model's attribution to useless features. These benchmarks measure recovery of a generating rule, not agronomic skill.
+We built a crop recommendation system that recommends a crop, explains the recommendation and suggests a fertilizer. Of the ten algorithms we tested, Random Forest and Naive Bayes were the most accurate, both at 99.55\% on 440 test samples, and the five best were within three test samples of each other. AdaBoost failed with its default stumps (17.50\%) but reached 99.32\% with depth-3 trees. SHAP showed that humidity and rainfall have the largest overall influence, with N, P and K close behind, and that the deciding factor changes from crop to crop. For fertilizer recommendation, XGBoost reached 97.69\% and the soil N, P and K values carried almost all of the importance.
 
-\textit{Future work.} We have built a district-level dataset from government crop statistics (data.gov.in, 34,940 district-season-year rows, 48 crops) on which we will compare random, leave-district-out, leave-state-out and temporal validation, once district soil (Soil Health Card) and climate features are attached. The rating-standard comparison of Table~\ref{tab:dose}(b) will be run on Soil Health Card samples. Results for these experiments are not reported here because they have not been run on real data.
+In future work we plan to test the system on real Soil Health Card reports combined with district rainfall records, so that the recommendations can be checked against what farmers actually grow. We also plan to convert the nutrient gap into fertilizer quantities in kg/ha using soil test based dose recommendations, to tune the hyperparameters of the strongest models, and to build a mobile application that gives the explanation in the farmer's own language.
 
 \begin{thebibliography}{00}
-\bibitem{kaggle_crop} A. Ingle, ``Crop recommendation dataset,'' Kaggle, 2020. [Online]. Available: \url{https://www.kaggle.com/datasets/atharvaingle/crop-recommendation-dataset}
-\bibitem{harvestify} Gladiator07, ``Harvestify,'' GitHub repository, commit aac427c, 2023. [Online]. Available: \url{https://github.com/Gladiator07/Harvestify}
-\bibitem{lundberg2017} S. M. Lundberg and S.-I. Lee, ``A unified approach to interpreting model predictions,'' in \textit{Advances in Neural Information Processing Systems}, vol. 30, 2017, pp. 4765--4774.
-\bibitem{lundberg2020} S. M. Lundberg \textit{et al.}, ``From local explanations to global understanding with explainable AI for trees,'' \textit{Nature Machine Intelligence}, vol. 2, no. 1, pp. 56--67, 2020.
-\bibitem{ribeiro2016} M. T. Ribeiro, S. Singh, and C. Guestrin, ```Why should I trust you?': Explaining the predictions of any classifier,'' in \textit{Proc. 22nd ACM SIGKDD Int. Conf. Knowledge Discovery and Data Mining}, 2016, pp. 1135--1144.
-\bibitem{krishna2024} S. Krishna, T. Han, A. Gu, S. Wu, S. Jabbari, and H. Lakkaraju, ``The disagreement problem in explainable machine learning: A practitioner's perspective,'' \textit{Transactions on Machine Learning Research}, 2024.
-\bibitem{nadeau2003} C. Nadeau and Y. Bengio, ``Inference for the generalization error,'' \textit{Machine Learning}, vol. 52, no. 3, pp. 239--281, 2003.
-\bibitem{bouckaert2004} R. R. Bouckaert and E. Frank, ``Evaluating the replicability of significance tests for comparing learning algorithms,'' in \textit{Advances in Knowledge Discovery and Data Mining (PAKDD)}, LNCS 3056, 2004, pp. 3--12.
-\bibitem{holm1979} S. Holm, ``A simple sequentially rejective multiple test procedure,'' \textit{Scandinavian Journal of Statistics}, vol. 6, no. 2, pp. 65--70, 1979.
-\bibitem{ojala2010} M. Ojala and G. C. Garriga, ``Permutation tests for studying classifier performance,'' \textit{Journal of Machine Learning Research}, vol. 11, pp. 1833--1863, 2010.
-\bibitem{kaufman2012} S. Kaufman, S. Rosset, C. Perlich, and O. Stitelman, ``Leakage in data mining: Formulation, detection, and avoidance,'' \textit{ACM Transactions on Knowledge Discovery from Data}, vol. 6, no. 4, pp. 1--21, 2012.
-\bibitem{kapoor2023} S. Kapoor and A. Narayanan, ``Leakage and the reproducibility crisis in machine-learning-based science,'' \textit{Patterns}, vol. 4, no. 9, p. 100804, 2023.
-\bibitem{wachter2018} S. Wachter, B. Mittelstadt, and C. Russell, ``Counterfactual explanations without opening the black box: Automated decisions and the GDPR,'' \textit{Harvard Journal of Law \& Technology}, vol. 31, no. 2, pp. 841--887, 2018.
-\bibitem{ustun2019} B. Ustun, A. Spangher, and Y. Liu, ``Actionable recourse in linear classification,'' in \textit{Proc. Conf. Fairness, Accountability, and Transparency (FAT*)}, 2019, pp. 10--19.
-\bibitem{guo2017} C. Guo, G. Pleiss, Y. Sun, and K. Q. Weinberger, ``On calibration of modern neural networks,'' in \textit{Proc. 34th Int. Conf. Machine Learning (ICML)}, PMLR 70, 2017, pp. 1321--1330.
-\bibitem{sadinle2019} M. Sadinle, J. Lei, and L. Wasserman, ``Least ambiguous set-valued classifiers with bounded error levels,'' \textit{Journal of the American Statistical Association}, vol. 114, no. 525, pp. 223--234, 2019.
-\bibitem{romano2020} Y. Romano, M. Sesia, and E. J. Cand\`es, ``Classification with valid and adaptive coverage,'' in \textit{Advances in Neural Information Processing Systems}, vol. 33, 2020, pp. 3581--3591.
-\bibitem{angelopoulos2021} A. N. Angelopoulos and S. Bates, ``A gentle introduction to conformal prediction and distribution-free uncertainty quantification,'' arXiv:2107.07511, 2021.
+\bibitem{liakos2018} K. G. Liakos, P. Busato, D. Moshou, S. Pearson, and D. Bochtis, ``Machine learning in agriculture: A review,'' \textit{Sensors}, vol. 18, no. 8, p. 2674, 2018.
+\bibitem{vanklompenburg2020} T. van Klompenburg, A. Kassahun, and C. Catal, ``Crop yield prediction using machine learning: A systematic literature review,'' \textit{Computers and Electronics in Agriculture}, vol. 177, p. 105709, 2020.
+\bibitem{kumar2015} R. Kumar, M. P. Singh, P. Kumar, and J. P. Singh, ``Crop selection method to maximize crop yield rate using machine learning technique,'' in \textit{Proc. Int. Conf. Smart Technologies and Management for Computing, Communication, Controls, Energy and Materials (ICSTM)}, 2015, pp. 138--145.
+\bibitem{pudumalar2017} S. Pudumalar, E. Ramanujam, R. H. Rajashree, C. Kavya, T. Kiruthika, and J. Nisha, ``Crop recommendation system for precision agriculture,'' in \textit{Proc. 8th Int. Conf. Advanced Computing (ICoAC)}, 2017, pp. 32--36.
+\bibitem{doshi2018} Z. Doshi, S. Nadkarni, R. Agrawal, and N. Shah, ``AgroConsultant: Intelligent crop recommendation system using machine learning algorithms,'' in \textit{Proc. 4th Int. Conf. Computing Communication Control and Automation (ICCUBEA)}, 2018, pp. 1--6.
+\bibitem{ryo2022} M. Ryo, ``Explainable artificial intelligence and interpretable machine learning for agricultural data analysis,'' \textit{Artificial Intelligence in Agriculture}, vol. 6, pp. 257--265, 2022.
+\bibitem{harvestify} A. Ingle (Gladiator07), ``Harvestify: Crop and fertilizer recommendation and plant disease detection,'' GitHub repository, 2023. [Online]. Available: \url{https://github.com/Gladiator07/Harvestify}
+\bibitem{kaggle_crop} A. Ingle, ``Crop recommendation dataset,'' Kaggle. [Online]. Available: \url{https://www.kaggle.com/datasets/atharvaingle/crop-recommendation-dataset}
+\bibitem{kaggle_fert} ``Fertilizer prediction,'' Kaggle. [Online]. Available: \url{https://www.kaggle.com/datasets/gdabhishek/fertilizer-prediction} % TODO: confirm link and uploader name
+\bibitem{quinlan1986} J. R. Quinlan, ``Induction of decision trees,'' \textit{Machine Learning}, vol. 1, no. 1, pp. 81--106, 1986.
 \bibitem{breiman2001} L. Breiman, ``Random forests,'' \textit{Machine Learning}, vol. 45, no. 1, pp. 5--32, 2001.
+\bibitem{cover1967} T. Cover and P. Hart, ``Nearest neighbor pattern classification,'' \textit{IEEE Transactions on Information Theory}, vol. 13, no. 1, pp. 21--27, 1967.
+\bibitem{cortes1995} C. Cortes and V. Vapnik, ``Support-vector networks,'' \textit{Machine Learning}, vol. 20, no. 3, pp. 273--297, 1995.
 \bibitem{freund1997} Y. Freund and R. E. Schapire, ``A decision-theoretic generalization of on-line learning and an application to boosting,'' \textit{Journal of Computer and System Sciences}, vol. 55, no. 1, pp. 119--139, 1997.
 \bibitem{zhu2009} J. Zhu, H. Zou, S. Rosset, and T. Hastie, ``Multi-class AdaBoost,'' \textit{Statistics and Its Interface}, vol. 2, no. 3, pp. 349--360, 2009.
 \bibitem{chen2016} T. Chen and C. Guestrin, ``XGBoost: A scalable tree boosting system,'' in \textit{Proc. 22nd ACM SIGKDD Int. Conf. Knowledge Discovery and Data Mining}, 2016, pp. 785--794.
 \bibitem{ke2017} G. Ke \textit{et al.}, ``LightGBM: A highly efficient gradient boosting decision tree,'' in \textit{Advances in Neural Information Processing Systems}, vol. 30, 2017, pp. 3146--3154.
-\bibitem{prokhorenkova2018} L. Prokhorenkova, G. Gusev, A. Vorobev, A. V. Dorogush, and A. Gulin, ``CatBoost: Unbiased boosting with categorical features,'' in \textit{Advances in Neural Information Processing Systems}, vol. 31, 2018.
-\bibitem{wolpert1992} D. H. Wolpert, ``Stacked generalization,'' \textit{Neural Networks}, vol. 5, no. 2, pp. 241--259, 1992.
+\bibitem{lundberg2017} S. M. Lundberg and S.-I. Lee, ``A unified approach to interpreting model predictions,'' in \textit{Advances in Neural Information Processing Systems}, vol. 30, 2017, pp. 4765--4774.
+\bibitem{lundberg2020} S. M. Lundberg \textit{et al.}, ``From local explanations to global understanding with explainable AI for trees,'' \textit{Nature Machine Intelligence}, vol. 2, no. 1, pp. 56--67, 2020.
+\bibitem{ribeiro2016} M. T. Ribeiro, S. Singh, and C. Guestrin, ```Why should I trust you?': Explaining the predictions of any classifier,'' in \textit{Proc. 22nd ACM SIGKDD Int. Conf. Knowledge Discovery and Data Mining}, 2016, pp. 1135--1144.
 \bibitem{pedregosa2011} F. Pedregosa \textit{et al.}, ``Scikit-learn: Machine learning in Python,'' \textit{Journal of Machine Learning Research}, vol. 12, pp. 2825--2830, 2011.
-\bibitem{grinsztajn2022} L. Grinsztajn, E. Oyallon, and G. Varoquaux, ``Why do tree-based models still outperform deep learning on typical tabular data?'' in \textit{Advances in Neural Information Processing Systems}, vol. 35 (Datasets and Benchmarks Track), 2022.
-\bibitem{roberts2017} D. R. Roberts \textit{et al.}, ``Cross-validation strategies for data with temporal, spatial, hierarchical, or phylogenetic structure,'' \textit{Ecography}, vol. 40, no. 8, pp. 913--929, 2017.
-\bibitem{icar_iiss} ICAR--Indian Institute of Soil Science, \textit{Harit Dhara}, vol. 4, no. 1, 2021. % TODO: add article title, authors and pages after opening the source.
-\bibitem{tnau_rating} TNAU Agritech Portal, ``Soil fertility rating chart,'' Tamil Nadu Agricultural University. [Online]. Available: \url{https://agritech.tnau.ac.in} % TODO: exact page URL and access date.
 \end{thebibliography}
 
 \end{document}

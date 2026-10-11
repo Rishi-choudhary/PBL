@@ -1,0 +1,9 @@
+feature,importance
+Phosphorus,0.4381
+Nitrogen,0.3143
+Potassium,0.2611
+Crop Type,0.0015
+Temperature,-0.0010
+Moisture,-0.0033
+Soil Type,-0.0050
+Humidity,-0.0058

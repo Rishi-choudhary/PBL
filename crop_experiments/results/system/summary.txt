@@ -1,0 +1,47 @@
+crop dataset: 2200 rows, 22 crops, per crop 100-100, missing 0, duplicates 0
+train 1760 rows, test 440 rows (stratified, seed 42)
+crop models (test acc, cv mean+-sd, errors of 440):
+  Naive Bayes                test 0.9955  F1 0.9954  cv 0.9949+-0.0042  errors 2  fit 0.00s
+  Random Forest              test 0.9955  F1 0.9955  cv 0.9938+-0.0061  errors 2  fit 0.24s
+  AdaBoost (depth-3 trees)   test 0.9932  F1 0.9930  cv 0.9875+-0.0029  errors 3  fit 0.92s
+  XGBoost                    test 0.9909  F1 0.9908  cv 0.9926+-0.0014  errors 4  fit 1.02s
+  LightGBM                   test 0.9886  F1 0.9886  cv 0.9903+-0.0039  errors 5  fit 1.44s
+  SVM (RBF)                  test 0.9841  F1 0.9840  cv 0.9790+-0.0103  errors 7  fit 0.16s
+  Decision Tree              test 0.9795  F1 0.9794  cv 0.9852+-0.0068  errors 9  fit 0.01s
+  KNN (k=5)                  test 0.9795  F1 0.9793  cv 0.9653+-0.0121  errors 9  fit 0.00s
+  Logistic Regression        test 0.9727  F1 0.9725  cv 0.9682+-0.0066  errors 12  fit 0.04s
+  AdaBoost (default)         test 0.1750  F1 0.0856  cv 0.3193+-0.0585  errors 363  fit 0.14s
+highest test accuracy: ['Naive Bayes', 'Random Forest']; model used in the system: Random Forest
+Random Forest test errors (actual -> predicted, count): [('blackgram', 'maize', 1), ('rice', 'jute', 1)]
+crops with F1 < 1 for Random Forest: blackgram 0.974, jute 0.976, maize 0.976, rice 0.974
+global SHAP share (RF, test set): Humidity 0.218, Rainfall 0.181, K 0.173, N 0.170, P 0.161, Temperature 0.066, pH 0.031
+top SHAP feature per crop: apple:P, banana:P, blackgram:Rainfall, chickpea:Humidity, coconut:Rainfall, coffee:Humidity, cotton:N, grapes:P, jute:Rainfall, kidneybeans:Humidity, lentil:Rainfall, maize:N, mango:Humidity, mothbeans:Humidity, mungbean:Humidity, muskmelon:Rainfall, orange:K, papaya:Humidity, pigeonpeas:Rainfall, pomegranate:K, rice:Rainfall, watermelon:Rainfall
+count of crops by top feature: {'Rainfall': 8, 'Humidity': 7, 'P': 3, 'N': 2, 'K': 2}
+farmer F1 explanation: predicted mango (p=0.98), actual mango; SHAP {'N': np.float64(0.123), 'P': np.float64(0.139), 'K': np.float64(0.14), 'Temperature': np.float64(0.094), 'Humidity': np.float64(0.232), 'pH': np.float64(0.006), 'Rainfall': np.float64(0.201)}; LIME {'N': np.float64(0.029), 'P': np.float64(0.057), 'K': np.float64(0.007), 'Temperature': np.float64(0.032), 'Humidity': np.float64(0.06), 'pH': np.float64(0.013), 'Rainfall': np.float64(0.023)}
+SHAP vs LIME on 100 test rows: same top feature 0.660, top-3 overlap 0.783
+fertilizer dataset: 99 rows, 7 classes {'Urea': 22, 'DAP': 18, '28-28': 17, '14-35-14': 14, '20-20': 14, '17-17-17': 7, '10-26-26': 7}
+fertilizer models (5x10 CV accuracy, macro-F1):
+  XGBoost                    0.9769+-0.0320  F1 0.9502
+  Decision Tree              0.9628+-0.0400  F1 0.9224
+  Random Forest              0.9507+-0.0443  F1 0.8922
+  Logistic Regression        0.9435+-0.0456  F1 0.8759
+  SVM (RBF)                  0.8809+-0.0519  F1 0.7761
+  AdaBoost (depth-3 trees)   0.8619+-0.1209  F1 0.7414
+  KNN (k=5)                  0.7141+-0.1040  F1 0.6313
+  Naive Bayes                0.6674+-0.0959  F1 0.6058
+fertilizer RF permutation importance: Phosphorus 0.438, Nitrogen 0.314, Potassium 0.261, Crop Type 0.002, Temperature -0.001, Moisture -0.003, Soil Type -0.005, Humidity -0.006
+fertilizer best XGBoost: one 5-fold run accuracy 0.9798
+nutrient-gap examples:
+farmer  soil_NPK  rank        crop required_NPK  gap_N  gap_P  gap_K  largest_gap                          advice
+    F1  18-17-31     1       mango     20-20-30    2.0    3.0   -1.0   P low by 3 add phosphate (e.g. DAP or SSP)
+    F1  18-17-31     2      orange     20-10-10    2.0   -7.0  -21.0 K high by 21         skip potash this season
+    F2  22-44-24     1   mothbeans     20-40-20   -2.0   -4.0   -4.0  P high by 4      skip phosphate this season
+    F2  22-44-24     2  pigeonpeas     20-60-20   -2.0   16.0   -4.0  P low by 16 add phosphate (e.g. DAP or SSP)
+    F3   3-67-24     1 kidneybeans     20-60-20   17.0   -7.0   -4.0  N low by 17        add nitrogen (e.g. urea)
+    F3   3-67-24     2  pigeonpeas     20-60-20   17.0   -7.0   -4.0  N low by 17        add nitrogen (e.g. urea)
+    F4  34-75-24     1  pigeonpeas     20-60-20  -14.0  -15.0   -4.0 P high by 15      skip phosphate this season
+    F4  34-75-24     2   mothbeans     20-40-20  -14.0  -35.0   -4.0 P high by 35      skip phosphate this season
+    F5  76-54-45     1        jute     80-40-40    4.0  -14.0   -5.0 P high by 14      skip phosphate this season
+    F5  76-54-45     2        rice     80-40-40    4.0  -14.0   -5.0 P high by 14      skip phosphate this season
+    F6 117-76-47     1      banana    100-75-50  -17.0   -1.0    3.0 N high by 17       skip nitrogen this season
+    F6 117-76-47     2      cotton    120-40-20    3.0  -36.0  -27.0 P high by 36      skip phosphate this season

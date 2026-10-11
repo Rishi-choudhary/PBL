@@ -1,0 +1,7 @@
+farmer,N,P,K,Temperature,Humidity,pH,Rainfall,actual,top1,top2,top3
+F1,18.0,17.0,31.0,31.7,45.2,5.7,93.8,mango,mango (0.98),orange (0.01),pigeonpeas (0.01)
+F2,22.0,44.0,24.0,24.3,56.3,6.0,59.0,mothbeans,mothbeans (0.72),pigeonpeas (0.10),maize (0.08)
+F3,3.0,67.0,24.0,17.0,19.9,5.5,103.3,kidneybeans,kidneybeans (0.99),pigeonpeas (0.01),blackgram (0.00)
+F4,34.0,75.0,24.0,23.5,51.3,4.8,192.3,pigeonpeas,pigeonpeas (0.98),mothbeans (0.02),blackgram (0.00)
+F5,76.0,54.0,45.0,24.3,77.6,6.2,185.0,jute,jute (0.91),rice (0.08),papaya (0.01)
+F6,117.0,76.0,47.0,25.6,77.4,6.1,93.1,banana,banana (0.99),cotton (0.01),blackgram (0.00)

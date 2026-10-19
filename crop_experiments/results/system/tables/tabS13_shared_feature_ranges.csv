@@ -1,0 +1,6 @@
+feature,crop_min,crop_max,crop_mean,fert_min,fert_max,fert_mean,crop_rows_inside_fert_range,fert_rows_inside_crop_range
+N,0.000,140.000,50.552,4,42,18.909,0.525,1.000
+P,5.000,145.000,53.363,0,42,18.606,0.402,0.778
+K,5.000,205.000,48.149,0,19,3.384,0.217,0.283
+Temperature,8.826,43.675,25.616,25,38,30.283,0.541,1.000
+Humidity,14.258,99.982,71.482,50,72,59.152,0.250,1.000

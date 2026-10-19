@@ -1,0 +1,49 @@
+A. crop dataset 2200 rows x 8 columns; fertilizer dataset 99 rows x 9 columns; neither has a row identifier
+A. shared features (crop min-max | fertilizer min-max | share of crop rows inside the fertilizer range):
+   N                0.0- 140.0 |   4.0- 42.0 | 0.525
+   P                5.0- 145.0 |   0.0- 42.0 | 0.402
+   K                5.0- 205.0 |   0.0- 19.0 | 0.217
+   Temperature      8.8-  43.7 |  25.0- 38.0 | 0.541
+   Humidity        14.3- 100.0 |  50.0- 72.0 | 0.250
+A. columns only in the crop dataset: pH, rainfall; only in the fertilizer dataset: moisture, soil type, crop type
+A. crops with a fertilizer crop type: 10 of 22 (blackgram, chickpea, cotton, kidneybeans, lentil, maize, mothbeans, mungbean, pigeonpeas, rice); without: apple, banana, coconut, coffee, grapes, jute, mango, muskmelon, orange, papaya, pomegranate, watermelon
+A. fertilizer crop types with a crop-dataset counterpart: 4 of 11 (Cotton, Maize, Paddy, Pulses); without: Barley, Ground Nuts, Millets, Oil seeds, Sugarcane, Tobacco, Wheat
+A. which dataset did a row come from? Random Forest on the 5 shared features, 5-fold CV: balanced accuracy 1.0000, ROC AUC 1.0000 (0.5 = cannot tell them apart)
+B. held-out crop farmers (440) inside the range of the fertilizer training data:
+   N inside the fertilizer range                                         235 / 440  (0.534)
+   P inside the fertilizer range                                         170 / 440  (0.386)
+   K inside the fertilizer range                                          95 / 440  (0.216)
+   Temperature inside the fertilizer range                               248 / 440  (0.564)
+   Humidity inside the fertilizer range                                  107 / 440  (0.243)
+   all five inside                                                         0 / 440  (0.000)
+   top-1 crop has a fertilizer crop type                                 199 / 440  (0.452)
+   all five inside and top-1 crop mapped                                   0 / 440  (0.000)
+   soil moisture and soil type given (not columns of the crop dataset)     0 / 440  (0.000)
+C. multimodel reproduces experiment 12: top-3 crops identical for 6 of 6 farmers (tabS4); nutrient-gap rows identical for 12 of 12 (tabS9)
+   F1 18-17-31   mango (0.98)           gap P low by 3     add phosphate (e.g. DAP or SSP)
+       ML product: not used: soil moisture not given; soil type not given; mango is not a crop type in the fertilizer data; humidity = 45.16 is outside 50-72, the range of the fertilizer training data; K = 31 is outside 0-19, the range of the fertilizer training data
+   F2 22-44-24   mothbeans (0.72)       gap P high by 4    skip phosphate this season
+       ML product: not used: soil moisture not given; soil type not given; temperature = 24.31 is outside 25-38, the range of the fertilizer training data; P = 44 is outside 0-42, the range of the fertilizer training data; K = 24 is outside 0-19, the range of the fertilizer training data
+   F3 3-67-24    kidneybeans (0.99)     gap N low by 17    add nitrogen (e.g. urea)
+       ML product: not used: soil moisture not given; soil type not given; temperature = 17 is outside 25-38, the range of the fertilizer training data; humidity = 19.91 is outside 50-72, the range of the fertilizer training data; N = 3 is outside 4-42, the range of the fertilizer training data; P = 67 is outside 0-42, the range of the fertilizer training data; K = 24 is outside 0-19, the range of the fertilizer training data
+   F4 34-75-24   pigeonpeas (0.98)      gap P high by 15   skip phosphate this season
+       ML product: not used: soil moisture not given; soil type not given; temperature = 23.5 is outside 25-38, the range of the fertilizer training data; P = 75 is outside 0-42, the range of the fertilizer training data; K = 24 is outside 0-19, the range of the fertilizer training data
+   F5 76-54-45   jute (0.91)            gap P high by 14   skip phosphate this season
+       ML product: not used: soil moisture not given; soil type not given; jute is not a crop type in the fertilizer data; temperature = 24.29 is outside 25-38, the range of the fertilizer training data; humidity = 77.63 is outside 50-72, the range of the fertilizer training data; N = 76 is outside 4-42, the range of the fertilizer training data; P = 54 is outside 0-42, the range of the fertilizer training data; K = 45 is outside 0-19, the range of the fertilizer training data
+   F6 117-76-47  banana (0.99)          gap N high by 17   skip nitrogen this season
+       ML product: not used: soil moisture not given; soil type not given; banana is not a crop type in the fertilizer data; humidity = 77.38 is outside 50-72, the range of the fertilizer training data; N = 117 is outside 4-42, the range of the fertilizer training data; P = 76 is outside 0-42, the range of the fertilizer training data; K = 47 is outside 0-19, the range of the fertilizer training data
+D. hand-entered inputs (typed by us, not from any dataset; they show the code path only, not a result):
+   example 1, all inputs inside the fertilizer range: {'N': 21, 'P': 42, 'K': 19, 'temperature': 28, 'humidity': 55, 'ph': 6.8, 'rainfall': 50, 'moisture': 40, 'soil_type': 'Sandy'}
+   Recommended crops:
+     1. mothbeans    probability 0.91   needs N-P-K 20-40-20; largest gap: P high by 2 -> skip phosphate this season
+     2. lentil       probability 0.05   needs N-P-K 20-60-20; largest gap: P low by 18 -> add phosphate (e.g. DAP or SSP)
+     3. mungbean     probability 0.03   needs N-P-K 20-40-20; largest gap: P high by 2 -> skip phosphate this season
+   Fertilizer product (ML model, crop = mothbeans): DAP (probability 0.52)
+   Nutrient-gap advice above covers every crop; the ML product model only covers inputs inside its 99-row training range.
+   example 2, same farmer with N = 90 and K = 43: {'N': 90, 'P': 42, 'K': 43, 'temperature': 28, 'humidity': 55, 'ph': 6.8, 'rainfall': 50, 'moisture': 40, 'soil_type': 'Sandy'}
+   Recommended crops:
+     1. coffee       probability 0.25   needs N-P-K 100-20-30; largest gap: P high by 22 -> skip phosphate this season
+     2. mothbeans    probability 0.17   needs N-P-K 20-40-20; largest gap: N high by 70 -> skip nitrogen this season
+     3. watermelon   probability 0.16   needs N-P-K 100-10-50; largest gap: P high by 32 -> skip phosphate this season
+   Fertilizer product (ML model): not used because coffee is not a crop type in the fertilizer data; N = 90 is outside 4-42, the range of the fertilizer training data; K = 43 is outside 0-19, the range of the fertilizer training data
+   Nutrient-gap advice above covers every crop; the ML product model only covers inputs inside its 99-row training range.

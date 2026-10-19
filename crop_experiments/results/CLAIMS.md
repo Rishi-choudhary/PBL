@@ -54,6 +54,24 @@ All of them are produced by `12_crop_system.py`. Paths are relative to `crop_exp
 | XGBoost one 5-fold run | 97/99 correct (0.9798); errors 10-26-26→14-35-14, 17-17-17→20-20 | `summary.txt`, `figures/figS6_fertilizer.png` |
 | Nutrient-gap rows (Table VII) | as printed | T `tabS9_nutrient_gap_examples.csv` |
 
+## Added after the mentor's review (not yet in the paper, deck or report)
+
+Produced by `14_five_fold_cv.py`, `15_multimodel_experiment.py` and `multimodel.py`. Paths are relative to `results/system/`, T = `tables/`.
+
+| Claim | Value | Source |
+|---|---|---|
+| 5-fold protocol | stratified, shuffled, seed 42, all 2,200 crop rows and all 99 fertilizer rows; every row tested once; population sd | `summary_cv5.txt` |
+| Crop, 5-fold accuracy mean ± sd | Random Forest 99.55 ± 0.32 (best), Naive Bayes 99.45 ± 0.18, LightGBM 99.32 ± 0.32, XGBoost 99.32 ± 0.35, AdaBoost depth-3 99.14 ± 0.42, Decision Tree 98.77 ± 0.68, SVM 98.36 ± 0.44, KNN 97.14 ± 0.68, Logistic Regression 97.09 ± 0.22, AdaBoost default 25.41 ± 9.19 | T `tabS11_crop_5fold_summary.csv`, per fold in T `tabS11_crop_5fold_per_fold.csv` |
+| Random Forest out of fold | 10 of 2,200 rows wrong: rice→jute 7, mothbeans→lentil 1, blackgram→maize 1, jute→rice 1 | `summary_cv5.txt` |
+| Fertilizer, 5-fold accuracy mean ± sd | XGBoost 98.00 ± 2.45, Decision Tree 98.00 ± 2.45, Logistic Regression 97.00 ± 4.00, Random Forest 96.00 ± 4.90, SVM 86.84 ± 4.09, AdaBoost depth-3 86.74 ± 12.35, KNN 73.74 ± 4.87, Naive Bayes 64.63 ± 10.03 | T `tabS12_fert_5fold_summary.csv` |
+| Shared features, ranges (crop / fertilizer) | N 0–140 / 4–42; P 5–145 / 0–42; K 5–205 / 0–19; temperature 8.8–43.7 / 25–38; humidity 14.3–100 / 50–72 | T `tabS13_shared_feature_ranges.csv` |
+| Crop names with a fertilizer crop type | 10 of 22 crops (maize, cotton, rice = Paddy, 7 pulses = Pulses); 4 of 11 fertilizer crop types have a crop-dataset counterpart | T `tabS13_crop_name_map.csv`, `summary_multimodel.txt` |
+| Which dataset did a row come from? | Random Forest on the 5 shared features, 5-fold CV: balanced accuracy 1.0000, ROC AUC 1.0000 | T `tabS13_source_classifier.csv` |
+| Held-out crop farmers inside the fertilizer data's range | N 235, P 170, K 95, temperature 248, humidity 107, all five 0, of 440; top-1 crop has a fertilizer crop type 199 of 440 | T `tabS14_ml_fertilizer_coverage.csv` |
+| Multimodel reproduces experiment 12 | top-3 crops identical for 6 of 6 farmers (tabS4); nutrient-gap rows identical for 12 of 12 (tabS9) | `summary_multimodel.txt`, T `tabS15_multimodel_six_farmers.csv` |
+| End-to-end accuracy of crop → fertilizer | NOT AVAILABLE: no dataset has both a crop label and a fertilizer label for the same record | – |
+| Two hand-entered inputs in `summary_multimodel.txt` (section D) | typed by us to show the code path; not data, not a result | – |
+
 ## Not in this paper
 
 The real district data experiments (07/08, soil and climate) have not been run. They are mentioned only as future work.

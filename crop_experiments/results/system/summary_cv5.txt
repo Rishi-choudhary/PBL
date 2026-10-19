@@ -1,0 +1,25 @@
+5-fold stratified CV, shuffle, seed 42; each row is tested exactly once
+crop dataset: 2200 rows, folds of [440] rows; models: 10
+crop, 5-fold accuracy mean+-sd (min..max fold) | macro F1 | hold-out test accuracy (tabS2):
+  Random Forest              0.9955+-0.0032 (0.9909..1.0000) | F1 0.9954 | hold-out 0.9955
+  Naive Bayes                0.9945+-0.0018 (0.9932..0.9977) | F1 0.9945 | hold-out 0.9955
+  LightGBM                   0.9932+-0.0032 (0.9886..0.9977) | F1 0.9932 | hold-out 0.9886
+  XGBoost                    0.9932+-0.0035 (0.9909..1.0000) | F1 0.9932 | hold-out 0.9909
+  AdaBoost (depth-3 trees)   0.9914+-0.0042 (0.9841..0.9955) | F1 0.9913 | hold-out 0.9932
+  Decision Tree              0.9877+-0.0068 (0.9773..0.9932) | F1 0.9877 | hold-out 0.9795
+  SVM (RBF)                  0.9836+-0.0044 (0.9773..0.9909) | F1 0.9836 | hold-out 0.9841
+  KNN (k=5)                  0.9714+-0.0068 (0.9591..0.9795) | F1 0.9712 | hold-out 0.9795
+  Logistic Regression        0.9709+-0.0022 (0.9682..0.9750) | F1 0.9707 | hold-out 0.9727
+  AdaBoost (default)         0.2541+-0.0919 (0.1386..0.3955) | F1 0.1703 | hold-out 0.1750
+highest 5-fold accuracy: ['Random Forest']
+Random Forest out-of-fold: 10 of 2200 rows wrong; (actual -> predicted): rice->jute, rice->jute, rice->jute, rice->jute, rice->jute, rice->jute, rice->jute, mothbeans->lentil, blackgram->maize, jute->rice
+fertilizer dataset: 99 rows, folds of [19, 20] rows; models: 8
+fertilizer, 5-fold accuracy mean+-sd (min..max fold) | macro F1 | 5x10 repeated CV accuracy (tabS7):
+  XGBoost                    0.9800+-0.0245 (0.9500..1.0000) | F1 0.9537 | 5x10 0.9769
+  Decision Tree              0.9800+-0.0245 (0.9500..1.0000) | F1 0.9521 | 5x10 0.9628
+  Logistic Regression        0.9700+-0.0400 (0.9000..1.0000) | F1 0.9426 | 5x10 0.9435
+  Random Forest              0.9600+-0.0490 (0.9000..1.0000) | F1 0.9180 | 5x10 0.9507
+  SVM (RBF)                  0.8684+-0.0409 (0.8000..0.9000) | F1 0.7894 | 5x10 0.8809
+  AdaBoost (depth-3 trees)   0.8674+-0.1235 (0.7000..1.0000) | F1 0.7522 | 5x10 0.8619
+  KNN (k=5)                  0.7374+-0.0487 (0.6500..0.8000) | F1 0.6728 | 5x10 0.7141
+  Naive Bayes                0.6463+-0.1003 (0.5000..0.8000) | F1 0.5596 | 5x10 0.6674

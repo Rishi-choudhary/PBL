@@ -15,19 +15,19 @@ All of them are produced by `12_crop_system.py`. Paths are relative to `crop_exp
 | Rice vs jute mean N, P, K, humidity, rainfall | 79.9/47.6/39.9, 82.3, 236.2 vs 78.4/46.9/40.0, 79.6, 174.8 | same |
 | Blackgram vs maize humidity | 65.1 vs 65.1 | same |
 
-## Algorithm comparison (Table IV, Fig. 3)
+## Algorithm comparison (Table IV held-out columns)
 
 | Claim | Value | Source |
 |---|---|---|
 | Every row of Table IV (test accuracy, precision, recall, F1, errors, CV mean ± sd, training time) | as printed | T `tabS2_crop_model_comparison.csv` |
 | Best test accuracy | Random Forest and Naive Bayes, 99.55 % (2 errors each) | T `tabS2_crop_model_comparison.csv` |
 | AdaBoost default / depth-3 | 17.50 % / 99.32 % | T `tabS2_crop_model_comparison.csv` |
-| Top-5 CV range | 98.75–99.49 % | T `tabS2_crop_model_comparison.csv` |
+| Top-5 CV range on the training set (earlier draft; the paper now uses 5-fold CV on all rows, 99.14–99.55 %) | 98.75–99.49 % | T `tabS2_crop_model_comparison.csv` |
 | RF errors | rice→jute 1, blackgram→maize 1 | `summary.txt` |
 | RF per-crop F1 < 1 | blackgram 0.974, jute 0.976, maize 0.976, rice 0.974 | T `tabS3_per_crop_best.csv` |
 | Six farmers' top-3 crops and probabilities (Table V) | as printed | T `tabS4_farmer_examples.csv` |
 
-## Overfitting check (deck slide 14; `13_overfitting_check.py`)
+## Overfitting check (PBL-3 deck slide 19; not in the paper; `13_overfitting_check.py`)
 
 | Claim | Value | Source |
 |---|---|---|
@@ -54,7 +54,7 @@ All of them are produced by `12_crop_system.py`. Paths are relative to `crop_exp
 | XGBoost one 5-fold run | 97/99 correct (0.9798); errors 10-26-26→14-35-14, 17-17-17→20-20 | `summary.txt`, `figures/figS6_fertilizer.png` |
 | Nutrient-gap rows (Table VII) | as printed | T `tabS9_nutrient_gap_examples.csv` |
 
-## Added after the mentor's review (not yet in the paper, deck or report)
+## Added after the mentor's review (in the paper: Table IV, Table VI, Fig. 3, Fig. 8, Sections III-E, III-H, IV-F; not yet in the deck or report)
 
 Produced by `14_five_fold_cv.py`, `15_multimodel_experiment.py` and `multimodel.py`. Paths are relative to `results/system/`, T = `tables/`.
 
